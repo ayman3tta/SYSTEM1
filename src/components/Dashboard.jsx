@@ -8,7 +8,6 @@ import {
   Users, 
   DollarSign, 
   ArrowLeft,
-  BarChart3,
   Calculator,
   AlertTriangle,
   CheckCircle2,
@@ -64,31 +63,7 @@ export const Dashboard = () => {
   const partnersStats = partnersList.map(name => getPartnerStats(name));
   const isDeficit = remainingCapitalPool < 0;
 
-  // Category breakdown
-  const getCategory = (itemName) => {
-    const name = itemName.toLowerCase();
-    if (name.includes('إيجار') || name.includes('ايجار') || name.includes('تأمين') || name.includes('سمسار')) return 'إيجار وتأمين';
-    if (name.includes('مرتبة') || name.includes('سرير') || name.includes('دولاب') || name.includes('فرش') || name.includes('مخدات') || name.includes('سفرة') || name.includes('طرابيزة') || name.includes('كرسي') || name.includes('مكتب') || name.includes('سجاد')) return 'أثاث ومفروشات';
-    if (name.includes('ثلاجة') || name.includes('تلاجة') || name.includes('غسالة') || name.includes('بوتجاز') || name.includes('مروحة') || name.includes('سخان') || name.includes('فلتر')) return 'أجهزة كهربائية';
-    if (name.includes('صيانة') || name.includes('مفاتيح') || name.includes('لمبات') || name.includes('سلك') || name.includes('دش') || name.includes('نجار') || name.includes('تصليح') || name.includes('محبس')) return 'صيانة';
-    return 'أخرى';
-  };
 
-  const categoryTotals = {};
-  data.expenses.forEach(e => {
-    const cat = getCategory(e.item);
-    categoryTotals[cat] = (categoryTotals[cat] || 0) + Number(e.amount || 0);
-  });
-  const sortedCategories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
-  const maxCat = Math.max(...Object.values(categoryTotals), 1);
-
-  const catColors = {
-    'أثاث ومفروشات':    { bar: 'from-blue-500 to-indigo-500',   dot: 'bg-blue-500'   },
-    'أجهزة كهربائية':   { bar: 'from-purple-500 to-pink-500',   dot: 'bg-purple-500' },
-    'إيجار وتأمين':     { bar: 'from-amber-500 to-orange-500',  dot: 'bg-amber-500'  },
-    'صيانة':            { bar: 'from-emerald-500 to-teal-500',  dot: 'bg-emerald-500'},
-    'أخرى':             { bar: 'from-cyan-500 to-blue-500',     dot: 'bg-cyan-500'   },
-  };
 
   return (
     <div className="space-y-5 animate-slide-up">
@@ -244,43 +219,7 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      {/* ── Expenses Chart ── */}
-      {sortedCategories.length > 0 && (
-        <div className="glass-card p-4 rounded-2xl">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-white text-sm flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-indigo-400" />
-              توزيع المصروفات
-            </h3>
-            <button onClick={() => setActiveTab('expenses')} className="text-[11px] text-blue-400 font-bold flex items-center gap-1">
-              سجل المصروفات <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="space-y-3">
-            {sortedCategories.map(([catName, amt]) => {
-              const pct = Math.round((amt / maxCat) * 100);
-              const color = catColors[catName] || catColors['أخرى'];
-              return (
-                <div key={catName}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`w-2 h-2 rounded-full ${color.dot}`} />
-                      <span className="text-slate-300">{catName}</span>
-                    </div>
-                    <span className="text-white font-bold">{amt.toLocaleString()} ج.م</span>
-                  </div>
-                  <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full bg-gradient-to-r ${color.bar} rounded-full transition-all duration-700`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+
 
       {/* ── Settlement CTA ── */}
       <button
