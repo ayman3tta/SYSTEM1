@@ -140,7 +140,7 @@ export const ExpensesManager = () => {
       </div>
 
       {/* Expenses List: Mobile Cards View (phone) */}
-      <div className="block md:hidden space-y-3">
+      <div className="block md:hidden space-y-2">
         {filteredExpenses.length === 0 ? (
           <div className="glass-card p-6 text-center text-slate-400 text-xs rounded-2xl">
             لا توجد مصروفات مطابقة للبحث المحدد.
@@ -149,50 +149,58 @@ export const ExpensesManager = () => {
           filteredExpenses.map((exp) => {
             const category = getCategory(exp.item);
             return (
-              <div key={exp.id} className="glass-card p-4 rounded-2xl space-y-3 border-r-4 border-r-amber-500">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h3 className="font-bold text-white text-sm">{exp.item}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[11px] font-mono text-slate-400">{exp.date}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-700/60 text-slate-300">
-                        {category}
-                      </span>
-                    </div>
+              <div 
+                key={exp.id} 
+                className="glass-card p-3 rounded-2xl flex items-center justify-between gap-2.5 border-r-4 border-r-amber-500 hover:border-white/15 transition-all"
+              >
+                {/* Right: Item details */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-white text-sm truncate">{exp.item}</h4>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0 ${
+                      exp.paidBy.includes('محمد') ? 'bg-blue-500/15 text-blue-300 border border-blue-500/20' :
+                      exp.paidBy.includes('ايمن') || exp.paidBy.includes('أيمن') ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20' :
+                      'bg-amber-500/15 text-amber-300 border border-amber-500/20'
+                    }`}>
+                      {exp.paidBy}
+                    </span>
                   </div>
-                  <div className="text-left shrink-0">
-                    <div className="text-base font-black text-amber-400">{Number(exp.amount).toLocaleString()}</div>
-                    <span className="text-[10px] text-slate-400">ج.م</span>
+                  <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-400">
+                    <span className="font-mono shrink-0">{exp.date}</span>
+                    <span className="text-slate-600">•</span>
+                    <span className="truncate">{category}</span>
+                    {exp.notes && (
+                      <>
+                        <span className="text-slate-600">•</span>
+                        <span className="truncate text-slate-500 italic max-w-[100px]">{exp.notes}</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                {exp.notes && (
-                  <p className="text-xs text-slate-300 bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                    {exp.notes}
-                  </p>
-                )}
+                {/* Left: Amount & Action Icon Buttons */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="text-left">
+                    <span className="text-sm font-black text-amber-400 font-mono">
+                      {Number(exp.amount).toLocaleString()}
+                    </span>
+                    <span className="text-[10px] text-slate-400 mr-1">ج.م</span>
+                  </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-700/60 text-xs">
-                  <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
-                    exp.paidBy.includes('محمد') ? 'bg-blue-500/10 text-blue-300 border border-blue-500/20' :
-                    exp.paidBy.includes('ايمن') || exp.paidBy.includes('أيمن') ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' :
-                    'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-                  }`}>
-                    دفعها: {exp.paidBy}
-                  </span>
-
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 no-print">
                     <button
                       onClick={() => handleOpenEdit(exp)}
-                      className="px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 font-medium active:scale-95 transition-all text-xs"
+                      className="w-8 h-8 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 flex items-center justify-center active:scale-90 transition-transform"
+                      title="تعديل"
                     >
-                      تعديل
+                      <Edit3 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => deleteExpense(exp.id)}
-                      className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-medium active:scale-95 transition-all text-xs"
+                      className="w-8 h-8 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 flex items-center justify-center active:scale-90 transition-transform"
+                      title="حذف"
                     >
-                      حذف
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
