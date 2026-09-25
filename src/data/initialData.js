@@ -900,6 +900,7 @@ export const initialData = {
       "id": 1,
       "month": "سبتمبر",
       "electricity": 0,
+      "internet": 0,
       "water": 0,
       "gas": 0,
       "notes": ""
@@ -908,6 +909,7 @@ export const initialData = {
       "id": 2,
       "month": "أكتوبر",
       "electricity": 0,
+      "internet": 0,
       "water": 0,
       "gas": 0,
       "notes": ""
@@ -916,6 +918,7 @@ export const initialData = {
       "id": 3,
       "month": "نوفمبر",
       "electricity": 0,
+      "internet": 0,
       "water": 0,
       "gas": 0,
       "notes": ""
@@ -924,6 +927,7 @@ export const initialData = {
       "id": 4,
       "month": "ديسمبر",
       "electricity": 0,
+      "internet": 0,
       "water": 0,
       "gas": 0,
       "notes": ""
@@ -932,6 +936,7 @@ export const initialData = {
       "id": 5,
       "month": "يناير",
       "electricity": 0,
+      "internet": 0,
       "water": 0,
       "gas": 0,
       "notes": ""
@@ -940,6 +945,7 @@ export const initialData = {
       "id": 6,
       "month": "فبراير",
       "electricity": 0,
+      "internet": 0,
       "water": 0,
       "gas": 0,
       "notes": ""
@@ -948,6 +954,7 @@ export const initialData = {
       "id": 7,
       "month": "مارس",
       "electricity": 0,
+      "internet": 0,
       "water": 0,
       "gas": 0,
       "notes": ""
@@ -956,6 +963,7 @@ export const initialData = {
       "id": 8,
       "month": "أبريل",
       "electricity": 0,
+      "internet": 0,
       "water": 0,
       "gas": 0,
       "notes": ""
@@ -964,6 +972,7 @@ export const initialData = {
       "id": 9,
       "month": "مايو",
       "electricity": 0,
+      "internet": 0,
       "water": 0,
       "gas": 0,
       "notes": ""
@@ -972,6 +981,7 @@ export const initialData = {
       "id": 10,
       "month": "يونيو",
       "electricity": 0,
+      "internet": 0,
       "water": 0,
       "gas": 0,
       "notes": ""
@@ -980,6 +990,7 @@ export const initialData = {
       "id": 11,
       "month": "يوليو",
       "electricity": 0,
+      "internet": 0,
       "water": 0,
       "gas": 0,
       "notes": ""
@@ -988,6 +999,7 @@ export const initialData = {
       "id": 12,
       "month": "أغسطس",
       "electricity": 0,
+      "internet": 0,
       "water": 0,
       "gas": 0,
       "notes": ""

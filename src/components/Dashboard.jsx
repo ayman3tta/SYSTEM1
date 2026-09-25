@@ -43,6 +43,8 @@ export const Dashboard = () => {
   const { 
     totalCapitalDeposits, 
     totalExpenses, 
+    manualExpensesTotal,
+    totalPartnerUtilityBills,
     remainingCapitalPool, 
     deficitAmount,
     equalDeficitSharePerPartner,
@@ -111,7 +113,9 @@ export const Dashboard = () => {
           iconBg="bg-amber-500/15"
           iconColor="text-amber-400"
           accent="text-amber-400"
-          sub={`${data.expenses.length} بند مصروف`}
+          sub={totalPartnerUtilityBills > 0 
+            ? `${(manualExpensesTotal || 0).toLocaleString()} تجهيزات + ${(totalPartnerUtilityBills || 0).toLocaleString()} مياه وغاز` 
+            : `${data.expenses.length} بند مصروف`}
           onClick={() => setActiveTab('expenses')}
         />
         <KpiCard

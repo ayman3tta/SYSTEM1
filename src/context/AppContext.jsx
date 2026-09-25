@@ -30,6 +30,16 @@ export const AppProvider = ({ children }) => {
         if (parsed.beds) {
           parsed.beds = parsed.beds.map(b => ({ ...b, month: b.month || 'سبتمبر 2026' }));
         }
+        // Ensure monthly bills have internet property
+        if (parsed.monthlyBills) {
+          parsed.monthlyBills = parsed.monthlyBills.map(b => ({
+            ...b,
+            electricity: Number(b.electricity || 0),
+            internet: Number(b.internet || 0),
+            water: Number(b.water || 0),
+            gas: Number(b.gas || 0)
+          }));
+        }
         return parsed;
       } catch (e) {
         console.error('Failed to parse local storage data', e);
@@ -38,6 +48,15 @@ export const AppProvider = ({ children }) => {
     // Set default month on initial beds
     const init = { ...initialData };
     init.beds = init.beds.map(b => ({ ...b, month: b.month || 'سبتمبر 2026' }));
+    if (init.monthlyBills) {
+      init.monthlyBills = init.monthlyBills.map(b => ({
+        ...b,
+        electricity: Number(b.electricity || 0),
+        internet: Number(b.internet || 0),
+        water: Number(b.water || 0),
+        gas: Number(b.gas || 0)
+      }));
+    }
     return init;
   });
 
@@ -57,7 +76,23 @@ export const AppProvider = ({ children }) => {
 
   // Helper calculations for Capital & Expenses
   const totalCapitalDeposits = data.capitalDeposits.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
-  const totalExpenses = data.expenses.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+  
+  // General expenses recorded manually
+  const manualExpensesTotal = data.expenses.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+
+  // Utilities Breakdown:
+  // 1) Water & Gas are on the partners (علينا احنا) -> added to overall apartment expenses
+  const totalWaterBills = (data.monthlyBills || []).reduce((acc, b) => acc + Number(b.water || 0), 0);
+  const totalGasBills = (data.monthlyBills || []).reduce((acc, b) => acc + Number(b.gas || 0), 0);
+  const totalPartnerUtilityBills = totalWaterBills + totalGasBills;
+
+  // 2) Electricity & Internet are on the bed tenants (على مستأجري السراير) -> divided by 8 beds
+  const totalElectricityBills = (data.monthlyBills || []).reduce((acc, b) => acc + Number(b.electricity || 0), 0);
+  const totalInternetBills = (data.monthlyBills || []).reduce((acc, b) => acc + Number(b.internet || 0), 0);
+  const totalTenantUtilityBills = totalElectricityBills + totalInternetBills;
+
+  // Total expenses that the partners must cover (manual expenses + water & gas bills)
+  const totalExpenses = manualExpensesTotal + totalPartnerUtilityBills;
   const remainingCapitalPool = totalCapitalDeposits - totalExpenses;
   const deficitAmount = remainingCapitalPool < 0 ? Math.abs(remainingCapitalPool) : 0;
 
@@ -356,14 +391,30 @@ export const AppProvider = ({ children }) => {
     XLSX.utils.book_append_sheet(wb, wsBeds, 'تفاصيل السراير والمستأجرين');
 
     // Sheet 4: الفواتير
-    const wsBillsData = data.monthlyBills.map(b => ({
-      'الشهر': b.month,
-      'كهرباء': b.electricity,
-      'مياه': b.water,
-      'غاز': b.gas,
-      'الإجمالي': b.electricity + b.water + b.gas,
-      'نصيب السرير': occupiedBedsCount > 0 ? ((b.electricity + b.water + b.gas) / occupiedBedsCount).toFixed(2) : 0
-    }));
+    const wsBillsData = data.monthlyBills.map(b => {
+      const elec = Number(b.electricity || 0);
+      const net = Number(b.internet || 0);
+      const water = Number(b.water || 0);
+      const gas = Number(b.gas || 0);
+      const tenantTotal = elec + net;
+      const partnerTotal = water + gas;
+      const totalAll = tenantTotal + partnerTotal;
+      const sharePerBed = (tenantTotal / 8).toFixed(1);
+      const sharePerPartner = (partnerTotal / 3).toFixed(1);
+
+      return {
+        'الشهر': b.month,
+        'كهرباء (على السراير)': elec,
+        'نت (على السراير)': net,
+        'إجمالي فواتير السراير (كهرباء + نت)': tenantTotal,
+        'نصيب السرير الواحد (÷ 8 سراير)': sharePerBed,
+        'مياه (على الشركاء - مصاريف)': water,
+        'غاز (على الشركاء - مصاريف)': gas,
+        'إجمالي فواتير الشركاء (مياه + غاز)': partnerTotal,
+        'نصيب كل شريك (÷ 3)': sharePerPartner,
+        'إجمالي كل الفواتير': totalAll
+      };
+    });
     const wsBills = XLSX.utils.json_to_sheet(wsBillsData);
     XLSX.utils.book_append_sheet(wb, wsBills, 'الفواتير الشهرية');
 
@@ -387,6 +438,13 @@ export const AppProvider = ({ children }) => {
         // Totals & Calcs
         totalCapitalDeposits,
         totalExpenses,
+        manualExpensesTotal,
+        totalWaterBills,
+        totalGasBills,
+        totalPartnerUtilityBills,
+        totalElectricityBills,
+        totalInternetBills,
+        totalTenantUtilityBills,
         remainingCapitalPool,
         deficitAmount,
         equalDeficitSharePerPartner,

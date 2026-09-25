@@ -11,11 +11,12 @@ import {
   Calendar, 
   User, 
   Tag,
-  ArrowUpDown
+  ArrowUpDown,
+  Droplets
 } from 'lucide-react';
 
 export const ExpensesManager = () => {
-  const { data, deleteExpense, partnersList } = useApp();
+  const { data, deleteExpense, partnersList, totalPartnerUtilityBills } = useApp();
 
   const [search, setSearch] = useState('');
   const [selectedPartner, setSelectedPartner] = useState('الكل');
@@ -83,6 +84,17 @@ export const ExpensesManager = () => {
           <span>إضافة مصروف جديد</span>
         </button>
       </div>
+
+      {/* Partner Utility Notice */}
+      {totalPartnerUtilityBills > 0 && (
+        <div className="glass-card p-3 rounded-xl border border-blue-500/30 bg-blue-500/10 flex items-center justify-between text-xs text-blue-200">
+          <div className="flex items-center gap-2">
+            <Droplets className="w-4 h-4 text-blue-400 shrink-0" />
+            <span>يُضاف إلى إجمالي المصروفات فواتير المياه والغاز المسجلة في سكشن الفواتير (علينا احنا):</span>
+          </div>
+          <span className="font-extrabold text-blue-300 text-sm">{totalPartnerUtilityBills.toLocaleString()} ج.م</span>
+        </div>
+      )}
 
       {/* Filter & Search Bar */}
       <div className="glass-card p-3.5 sm:p-4 rounded-2xl space-y-3">
