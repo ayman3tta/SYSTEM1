@@ -6,7 +6,7 @@ import {
   Wallet, 
   Bed, 
   Zap, 
-  Calculator 
+  Scale
 } from 'lucide-react';
 
 export const Sidebar = () => {
@@ -17,61 +17,59 @@ export const Sidebar = () => {
   const navItems = [
     {
       id: 'dashboard',
-      label: 'الداشبورد',
-      fullLabel: 'لوحة التحكم',
+      label: 'الرئيسية',
       icon: LayoutDashboard,
       badge: null,
-      activeColor: 'from-blue-600 to-indigo-600'
+      gradient: 'from-blue-500 to-indigo-500',
+      glow: 'shadow-blue-500/40'
     },
     {
       id: 'beds',
       label: 'السراير',
-      fullLabel: 'تفاصيل السراير والمستأجرين',
       icon: Bed,
       badge: `${occupiedBedsCount}/${data.beds.length}`,
-      activeColor: 'from-indigo-600 to-purple-600'
+      gradient: 'from-violet-500 to-purple-600',
+      glow: 'shadow-violet-500/40'
     },
     {
       id: 'capital',
       label: 'رأس المال',
-      fullLabel: 'رأس المال والشركاء',
       icon: Wallet,
-      badge: data.capitalDeposits.length,
-      activeColor: 'from-emerald-600 to-teal-600'
+      badge: data.capitalDeposits.length || null,
+      gradient: 'from-emerald-500 to-teal-500',
+      glow: 'shadow-emerald-500/40'
     },
     {
       id: 'expenses',
       label: 'المصروفات',
-      fullLabel: 'سجل المصروفات',
       icon: Receipt,
-      badge: data.expenses.length,
-      activeColor: 'from-amber-500 to-orange-600'
+      badge: data.expenses.length || null,
+      gradient: 'from-amber-500 to-orange-500',
+      glow: 'shadow-amber-500/40'
     },
     {
       id: 'bills',
       label: 'الفواتير',
-      fullLabel: 'الفواتير الشهرية',
       icon: Zap,
-      badge: data.monthlyBills.length,
-      activeColor: 'from-yellow-500 to-amber-600'
+      badge: null,
+      gradient: 'from-yellow-400 to-amber-500',
+      glow: 'shadow-yellow-500/40'
     },
     {
       id: 'settlement',
       label: 'التسوية',
-      fullLabel: 'تسوية حساب الشركاء',
-      icon: Calculator,
+      icon: Scale,
       badge: null,
-      activeColor: 'from-cyan-600 to-blue-600'
+      gradient: 'from-cyan-500 to-blue-500',
+      glow: 'shadow-cyan-500/40'
     }
   ];
 
   return (
     <>
-      {/* Desktop Sidebar (md and up) */}
-      <aside className="hidden md:flex w-64 bg-slate-800/50 border-l border-slate-700/60 p-4 flex-col gap-2 shrink-0 no-print">
-        <div className="text-xs font-bold text-slate-400 px-2 py-1 uppercase tracking-wider">
-          اختصارات التنقل الرئيسي
-        </div>
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex w-56 bg-slate-900/60 border-l border-slate-800 p-3 flex-col gap-1.5 shrink-0 no-print">
+        <p className="text-[10px] font-bold text-slate-500 px-3 py-1 uppercase tracking-widest">القائمة الرئيسية</p>
         {navItems.map(item => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -79,19 +77,19 @@ export const Sidebar = () => {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-95 ${
+              className={`flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 ${
                 isActive
-                  ? `bg-gradient-to-r ${item.activeColor} text-white shadow-lg shadow-blue-500/20 font-bold border border-white/20`
-                  : 'text-slate-300 hover:bg-slate-700/60 hover:text-white border border-transparent'
+                  ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg ${item.glow}`
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
               }`}
             >
-              <div className="flex items-center gap-3">
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                <span>{item.fullLabel}</span>
+              <div className="flex items-center gap-2.5">
+                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                <span>{item.label}</span>
               </div>
               {item.badge !== null && (
-                <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full ${
-                  isActive ? 'bg-white/25 text-white font-bold' : 'bg-slate-700 text-slate-300'
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                  isActive ? 'bg-white/25 text-white' : 'bg-slate-800 text-slate-400'
                 }`}>
                   {item.badge}
                 </span>
@@ -101,37 +99,56 @@ export const Sidebar = () => {
         })}
       </aside>
 
-      {/* Mobile & Tablet Bottom Button Bar (شريط الأزرار الثابت بالأسفل) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-2xl border-t border-slate-800/90 px-1.5 py-2 flex items-center justify-between no-print shadow-[0_-8px_30px_rgba(0,0,0,0.8)] gap-1 overflow-x-auto">
-        {navItems.map(item => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all duration-200 active:scale-95 relative min-w-[54px] ${
-                isActive 
-                  ? `bg-gradient-to-b ${item.activeColor} text-white font-bold shadow-md border border-white/20` 
-                  : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800/80'
-              }`}
-            >
-              <div className="relative flex items-center justify-center">
-                <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isActive ? 'text-white scale-110' : 'text-slate-400'} transition-transform`} />
-                {item.badge !== null && (
-                  <span className={`absolute -top-1.5 -right-2 text-[9px] font-extrabold px-1 rounded-full ${
-                    isActive ? 'bg-white text-slate-950' : 'bg-slate-800 text-slate-300 border border-slate-700'
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 no-print" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        {/* Frosted Glass Background */}
+        <div className="bg-slate-950/90 backdrop-blur-2xl border-t border-slate-800/80 shadow-[0_-8px_40px_rgba(0,0,0,0.7)]">
+          <div className="flex items-stretch justify-around px-1 pt-2 pb-2">
+            {navItems.map(item => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl transition-all duration-200 active:scale-90 relative min-w-0`}
+                >
+                  {/* Active Indicator */}
+                  {isActive && (
+                    <span className={`absolute inset-0 rounded-xl bg-gradient-to-b ${item.gradient} opacity-15`} />
+                  )}
+                  
+                  {/* Icon Container */}
+                  <div className={`relative w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-200 ${
+                    isActive 
+                      ? `bg-gradient-to-br ${item.gradient} shadow-lg ${item.glow}` 
+                      : 'bg-transparent'
                   }`}>
-                    {item.badge}
+                    <Icon className={`w-4 h-4 transition-all ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                    
+                    {/* Badge */}
+                    {item.badge !== null && (
+                      <span className={`absolute -top-1 -right-1.5 text-[9px] font-black px-1 rounded-full leading-tight ${
+                        isActive 
+                          ? 'bg-white text-slate-900' 
+                          : 'bg-slate-700 text-slate-300'
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Label */}
+                  <span className={`text-[10px] leading-none font-bold transition-all ${
+                    isActive ? 'text-white' : 'text-slate-600'
+                  }`}>
+                    {item.label}
                   </span>
-                )}
-              </div>
-              <span className={`text-[10px] sm:text-[11px] mt-1 whitespace-nowrap tracking-tight ${isActive ? 'font-bold text-white' : 'font-medium text-slate-300'}`}>
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </nav>
     </>
   );

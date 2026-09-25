@@ -13,13 +13,15 @@ const MainContent = () => {
   const { activeTab } = useApp();
 
   return (
-    <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full pb-24 md:pb-8">
-      {activeTab === 'dashboard' && <Dashboard />}
-      {activeTab === 'expenses' && <ExpensesManager />}
-      {activeTab === 'capital' && <CapitalManager />}
-      {activeTab === 'beds' && <BedsManager />}
-      {activeTab === 'bills' && <UtilityBillsManager />}
-      {activeTab === 'settlement' && <SettlementModal />}
+    <main className="flex-1 overflow-y-auto">
+      <div className="p-3 sm:p-5 md:p-6 max-w-5xl mx-auto w-full pb-28 md:pb-8">
+        {activeTab === 'dashboard'   && <Dashboard />}
+        {activeTab === 'expenses'    && <ExpensesManager />}
+        {activeTab === 'capital'     && <CapitalManager />}
+        {activeTab === 'beds'        && <BedsManager />}
+        {activeTab === 'bills'       && <UtilityBillsManager />}
+        {activeTab === 'settlement'  && <SettlementModal />}
+      </div>
     </main>
   );
 };
@@ -27,9 +29,9 @@ const MainContent = () => {
 export function App() {
   return (
     <AppProvider>
-      <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-cairo selection:bg-blue-600 selection:text-white relative">
+      <div className="min-h-screen h-screen flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 font-cairo selection:bg-blue-600 selection:text-white" dir="rtl">
         <Header />
-        <div className="flex-1 flex flex-col md:flex-row">
+        <div className="flex-1 flex overflow-hidden">
           <Sidebar />
           <MainContent />
         </div>
