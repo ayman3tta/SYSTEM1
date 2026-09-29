@@ -75,19 +75,19 @@ export const BedsManager = () => {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={handleOpenAdd}
-            className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors"
+            onClick={handleStartNextMonth}
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-md shadow-indigo-600/20 active:scale-95"
           >
-            <Plus className="w-3.5 h-3.5" />
-            سرير جديد
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            بدء {nextMonthName}
           </button>
         </div>
       </div>
 
       {/* ── Month selector + quick stats strip ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
         {/* Month Picker */}
-        <div className="col-span-2 sm:col-span-1 glass-card rounded-xl px-3 py-2.5 flex items-center gap-2">
+        <div className="glass-card rounded-xl px-3 py-2.5 flex items-center gap-2">
           <Calendar className="w-4 h-4 text-indigo-400 shrink-0" />
           <select
             value={selectedMonth}
@@ -113,17 +113,6 @@ export const BedsManager = () => {
           <div className={`text-sm font-black ${totalRemainingCurrentRent > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
             {totalRemainingCurrentRent.toLocaleString()} ج.م
           </div>
-        </div>
-
-        {/* Start New Month */}
-        <div className="glass-card rounded-xl px-3 py-2.5 flex items-center justify-center">
-          <button
-            onClick={handleStartNextMonth}
-            className="text-xs font-bold text-indigo-300 hover:text-white transition-colors flex items-center gap-1"
-          >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            بدء {nextMonthName}
-          </button>
         </div>
       </div>
 
