@@ -1,6 +1,21 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Download, RefreshCw, Printer, Building2, MoreVertical, X, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { GoogleSheetsModal } from './GoogleSheetsModal';
+import { getGoogleSheetLink } from '../services/googleSheetsService';
+import {
+  Download,
+  RefreshCw,
+  Printer,
+  Building2,
+  MoreVertical,
+  X,
+  TrendingUp,
+  TrendingDown,
+  FileSpreadsheet,
+  ExternalLink,
+  CheckCircle2,
+  AlertCircle
+} from 'lucide-react';
 
 export const Header = () => {
   const { 
@@ -9,11 +24,15 @@ export const Header = () => {
     remainingCapitalPool, 
     exportToExcel, 
     resetToInitialData,
-    toast 
+    toast,
+    syncStatus,
+    isSheetsConnected
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sheetsModalOpen, setSheetsModalOpen] = useState(false);
   const isDeficit = remainingCapitalPool < 0;
+  const sheetLink = getGoogleSheetLink();
 
   return (
     <header className="bg-slate-900/95 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-xl no-print">
@@ -29,24 +48,72 @@ export const Header = () => {
         </div>
       )}
 
-      <div className="px-4 py-3">
-        <div className="flex items-center justify-between gap-3">
+      {/* Google Sheets Modal */}
+      <GoogleSheetsModal
+        isOpen={sheetsModalOpen}
+        onClose={() => setSheetsModalOpen(false)}
+      />
+
+      <div className="px-3 sm:px-4 py-3">
+        <div className="flex items-center justify-between gap-2 sm:gap-3">
           
           {/* Logo & Title */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 shrink-0">
               <Building2 className="w-5 h-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-sm font-black text-white leading-tight">سيستم شقة الكوثر</h1>
+              <h1 className="text-sm font-black text-white leading-tight truncate">سيستم شقة الكوثر</h1>
               <p className="text-[11px] text-slate-400 leading-tight">محمد • أيمن • أحمد</p>
             </div>
           </div>
 
-          {/* Right Side: Balance + Menu */}
+          {/* Right Side: Google Sheets + Balance + Actions */}
           <div className="flex items-center gap-2 shrink-0">
+            
+            {/* Google Sheets Sync Button / Badge */}
+            <button
+              onClick={() => setSheetsModalOpen(true)}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold transition-all active:scale-95 ${
+                syncStatus === 'synced'
+                  ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60'
+                  : syncStatus === 'saving' || syncStatus === 'loading'
+                  ? 'bg-blue-950/60 border-blue-500/40 text-blue-300 animate-pulse'
+                  : syncStatus === 'error'
+                  ? 'bg-rose-950/60 border-rose-500/40 text-rose-300 hover:bg-rose-900/60'
+                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+              }`}
+              title="إعدادات ومزامنة Google Sheets"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span className="hidden md:inline">
+                {syncStatus === 'synced' && 'Google Sheets متزامن'}
+                {syncStatus === 'saving' && 'جاري الحفظ...'}
+                {syncStatus === 'loading' && 'جاري المزامنة...'}
+                {syncStatus === 'error' && 'خطأ في الربط'}
+                {syncStatus === 'unconfigured' && 'ربط Google Sheets'}
+              </span>
+              <span className="md:hidden">
+                {syncStatus === 'synced' ? '🟢 متزامن' : syncStatus === 'saving' ? '⏳' : 'شيت جوجل'}
+              </span>
+            </button>
+
+            {/* Quick Open Google Sheet in Browser (if link exists) */}
+            {sheetLink && (
+              <a
+                href={sheetLink}
+                target="_blank"
+                rel="noreferrer"
+                className="hidden lg:flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 text-xs font-bold transition-colors"
+                title="فتح الشيت على Google Drive"
+              >
+                <span>فتح الشيت</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+
             {/* Balance Pill */}
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold ${
+            <div className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold ${
               isDeficit 
                 ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
                 : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
@@ -67,10 +134,11 @@ export const Header = () => {
               </button>
               <button
                 onClick={exportToExcel}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold transition-all active:scale-95"
+                title="نسخة احتياطية Excel"
               >
                 <Download className="w-3.5 h-3.5" />
-                Excel
+                <span className="hidden xl:inline">نسخة احتياطية</span>
               </button>
               <button
                 onClick={resetToInitialData}
@@ -93,27 +161,34 @@ export const Header = () => {
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="sm:hidden mt-3 pt-3 border-t border-slate-800 grid grid-cols-3 gap-2 animate-slide-up">
+          <div className="sm:hidden mt-3 pt-3 border-t border-slate-800 grid grid-cols-4 gap-2 animate-slide-up">
+            <button
+              onClick={() => { setSheetsModalOpen(true); setMobileMenuOpen(false); }}
+              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[11px] font-bold active:scale-95"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+              جوجل شيت
+            </button>
             <button
               onClick={() => { exportToExcel(); setMobileMenuOpen(false); }}
-              className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[11px] font-bold active:scale-95"
+              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 text-[11px] font-medium active:scale-95"
             >
-              <Download className="w-5 h-5" />
-              تصدير
+              <Download className="w-4 h-4" />
+              نسخة Excel
             </button>
             <button
               onClick={() => { window.print(); setMobileMenuOpen(false); }}
-              className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 text-[11px] font-medium active:scale-95"
+              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 text-[11px] font-medium active:scale-95"
             >
-              <Printer className="w-5 h-5" />
+              <Printer className="w-4 h-4" />
               طباعة
             </button>
             <button
               onClick={() => { resetToInitialData(); setMobileMenuOpen(false); }}
-              className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-rose-500/10 text-rose-300 border border-rose-500/20 text-[11px] font-medium active:scale-95"
+              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-rose-500/10 text-rose-300 border border-rose-500/20 text-[11px] font-medium active:scale-95"
             >
-              <RefreshCw className="w-5 h-5" />
-              إعادة الضبط
+              <RefreshCw className="w-4 h-4" />
+              إعادة ضبط
             </button>
           </div>
         )}

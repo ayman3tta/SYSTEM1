@@ -1,6 +1,23 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { initialData } from '../data/initialData';
 import * as XLSX from 'xlsx';
+import {
+  isSheetsConfigured,
+  fetchAllDataFromSheets,
+  syncAllDataToSheets,
+  addExpenseToSheets,
+  updateExpenseInSheets,
+  deleteExpenseFromSheets,
+  addCapitalDepositToSheets,
+  updateCapitalDepositInSheets,
+  deleteCapitalDepositFromSheets,
+  updateBedInSheets,
+  addBedToSheets,
+  batchUpdateBedsInSheets,
+  updateMonthlyBillInSheets,
+  setGoogleScriptUrl,
+  setGoogleSheetLink
+} from '../services/googleSheetsService';
 
 const AppContext = createContext();
 
@@ -26,11 +43,9 @@ export const AppProvider = ({ children }) => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Ensure all beds have month property
         if (parsed.beds) {
           parsed.beds = parsed.beds.map(b => ({ ...b, month: b.month || 'سبتمبر 2026' }));
         }
-        // Ensure monthly bills have internet property
         if (parsed.monthlyBills) {
           parsed.monthlyBills = parsed.monthlyBills.map(b => ({
             ...b,
@@ -45,7 +60,6 @@ export const AppProvider = ({ children }) => {
         console.error('Failed to parse local storage data', e);
       }
     }
-    // Set default month on initial beds
     const init = { ...initialData };
     init.beds = init.beds.map(b => ({ ...b, month: b.month || 'سبتمبر 2026' }));
     if (init.monthlyBills) {
@@ -63,15 +77,106 @@ export const AppProvider = ({ children }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedMonth, setSelectedMonth] = useState('سبتمبر 2026');
   const [toast, setToast] = useState(null);
+  const [syncStatus, setSyncStatus] = useState(isSheetsConfigured() ? 'loading' : 'unconfigured');
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   // Save to localStorage whenever data changes
   useEffect(() => {
     localStorage.setItem('apartment_management_data_v1', JSON.stringify(data));
   }, [data]);
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+  // جلب البيانات من Google Sheets عند بدء التشغيل
+  const refreshFromGoogleSheets = useCallback(async (isInitial = false) => {
+    if (!isSheetsConfigured()) {
+      setSyncStatus('unconfigured');
+      return;
+    }
+
+    try {
+      setSyncStatus('loading');
+      const remoteData = await fetchAllDataFromSheets();
+
+      if (remoteData && (remoteData.expenses || remoteData.beds || remoteData.capitalDeposits)) {
+        // Ensure proper formats
+        const formattedBeds = (remoteData.beds || []).map(b => ({
+          ...b,
+          month: b.month || 'سبتمبر 2026'
+        }));
+
+        const formattedBills = (remoteData.monthlyBills || []).map(b => ({
+          ...b,
+          electricity: Number(b.electricity || 0),
+          internet: Number(b.internet || 0),
+          water: Number(b.water || 0),
+          gas: Number(b.gas || 0)
+        }));
+
+        setData(prev => ({
+          partners: (remoteData.partners && remoteData.partners.length > 0) ? remoteData.partners : prev.partners,
+          capitalDeposits: remoteData.capitalDeposits || [],
+          expenses: remoteData.expenses || [],
+          beds: formattedBeds.length > 0 ? formattedBeds : prev.beds,
+          monthlyBills: formattedBills.length > 0 ? formattedBills : prev.monthlyBills
+        }));
+
+        setSyncStatus('synced');
+        if (!isInitial) {
+          showToast('تم تحديث البيانات مباشرة من Google Sheets');
+        }
+      } else {
+        setSyncStatus('synced');
+      }
+    } catch (error) {
+      console.error('Error fetching data from Google Sheets:', error);
+      setSyncStatus('error');
+      if (!isInitial) {
+        showToast('تعذر الاتصال بجوجل شيت، يتم العمل على النسخة المحلية', 'info');
+      }
+    }
+  }, []);
+
+  // Fetch on mount if configured
+  useEffect(() => {
+    if (isSheetsConfigured()) {
+      refreshFromGoogleSheets(true);
+    }
+  }, [refreshFromGoogleSheets]);
+
+  // رفع كل البيانات دفعة واحدة إلى Google Sheets (ترحيل / مزامنة كاملة)
+  const syncAllToGoogleSheets = async () => {
+    if (!isSheetsConfigured()) {
+      showToast('يرجى أولاً إدخال رابط Google Apps Script في الإعدادات', 'info');
+      return false;
+    }
+
+    try {
+      setSyncStatus('saving');
+      await syncAllDataToSheets(data);
+      setSyncStatus('synced');
+      showToast('تم رفع ومزامنة جميع البيانات إلى Google Sheets بنجاح! 🚀');
+      return true;
+    } catch (error) {
+      console.error('Failed to sync all data:', error);
+      setSyncStatus('error');
+      showToast('فشل رفع البيانات إلى Google Sheets: ' + (error.message || ''), 'error');
+      return false;
+    }
+  };
+
+  // حفظ إعدادات رابط Google Sheets
+  const saveGoogleSheetsConfig = (scriptUrl, sheetLink) => {
+    setGoogleScriptUrl(scriptUrl);
+    setGoogleSheetLink(sheetLink);
+    if (scriptUrl) {
+      setSyncStatus('loading');
+      refreshFromGoogleSheets(false);
+    } else {
+      setSyncStatus('unconfigured');
+    }
   };
 
   // Helper calculations for Capital & Expenses
@@ -81,17 +186,14 @@ export const AppProvider = ({ children }) => {
   const manualExpensesTotal = data.expenses.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
 
   // Utilities Breakdown:
-  // 1) Water & Gas are on the partners (علينا احنا) -> added to overall apartment expenses
   const totalWaterBills = (data.monthlyBills || []).reduce((acc, b) => acc + Number(b.water || 0), 0);
   const totalGasBills = (data.monthlyBills || []).reduce((acc, b) => acc + Number(b.gas || 0), 0);
   const totalPartnerUtilityBills = totalWaterBills + totalGasBills;
 
-  // 2) Electricity & Internet are on the bed tenants (على مستأجري السراير) -> divided by 8 beds
   const totalElectricityBills = (data.monthlyBills || []).reduce((acc, b) => acc + Number(b.electricity || 0), 0);
   const totalInternetBills = (data.monthlyBills || []).reduce((acc, b) => acc + Number(b.internet || 0), 0);
   const totalTenantUtilityBills = totalElectricityBills + totalInternetBills;
 
-  // Total expenses that the partners must cover (manual expenses + water & gas bills)
   const totalExpenses = manualExpensesTotal + totalPartnerUtilityBills;
   const remainingCapitalPool = totalCapitalDeposits - totalExpenses;
   const deficitAmount = remainingCapitalPool < 0 ? Math.abs(remainingCapitalPool) : 0;
@@ -123,7 +225,6 @@ export const AppProvider = ({ children }) => {
   // Beds calculations filtered by selected Month
   const bedsForSelectedMonth = data.beds.filter(b => (b.month || 'سبتمبر 2026') === selectedMonth);
 
-  // If no beds exist for selected month, fallback to latest existing month's beds template
   const currentBedsList = bedsForSelectedMonth.length > 0 
     ? bedsForSelectedMonth 
     : data.beds.filter(b => b.month === 'سبتمبر 2026');
@@ -144,7 +245,7 @@ export const AppProvider = ({ children }) => {
   const totalCollectedFromTenants = totalCollectedDeposit + totalCollectedCurrentRent;
 
   // Start / Roll Over to a New Month
-  const startNewMonth = (targetMonth) => {
+  const startNewMonth = async (targetMonth) => {
     const existing = data.beds.filter(b => b.month === targetMonth);
     if (existing.length > 0) {
       setSelectedMonth(targetMonth);
@@ -152,7 +253,6 @@ export const AppProvider = ({ children }) => {
       return;
     }
 
-    // Get beds from the latest existing month
     const sourceBeds = currentBedsList;
     const maxId = data.beds.length > 0 ? Math.max(...data.beds.map(b => b.id)) : 0;
 
@@ -168,22 +268,33 @@ export const AppProvider = ({ children }) => {
         tenantName: isOccupied ? b.tenantName : '',
         startDate: isOccupied ? b.startDate : '',
         depositRequired: isOccupied ? b.depositRequired : b.monthlyPrice,
-        depositPaid: isOccupied ? b.depositPaid : 0, // Carried over!
+        depositPaid: isOccupied ? b.depositPaid : 0,
         depositRemaining: isOccupied ? b.depositRemaining : b.monthlyPrice,
-        rentRequired: isOccupied ? b.monthlyPrice : 0, // Full monthly rent for new month
-        rentPaid: 0, // Reset rent paid for new month
+        rentRequired: isOccupied ? b.monthlyPrice : 0,
+        rentPaid: 0,
         rentRemaining: isOccupied ? b.monthlyPrice : 0,
         notes: isOccupied ? 'مستمر من الشهر السابق' : ''
       };
     });
 
+    const updatedBeds = [...data.beds, ...newBeds];
     setData(prev => ({
       ...prev,
-      beds: [...prev.beds, ...newBeds]
+      beds: updatedBeds
     }));
 
     setSelectedMonth(targetMonth);
-    showToast(`تم تفعيل شهر ${targetMonth} بنجاح وترحيل المستأجرين والتأمينات وتصفير الإيجار!`);
+    showToast(`تم تفعيل شهر ${targetMonth} وترحيل المستأجرين`);
+
+    if (isSheetsConfigured()) {
+      setSyncStatus('saving');
+      batchUpdateBedsInSheets(updatedBeds)
+        .then(() => setSyncStatus('synced'))
+        .catch(err => {
+          console.error(err);
+          setSyncStatus('error');
+        });
+    }
   };
 
   // Actions for Expenses
@@ -195,6 +306,16 @@ export const AppProvider = ({ children }) => {
       expenses: [newExpense, ...prev.expenses]
     }));
     showToast('تمت إضافة المصروف بنجاح');
+
+    if (isSheetsConfigured()) {
+      setSyncStatus('saving');
+      addExpenseToSheets(newExpense)
+        .then(() => setSyncStatus('synced'))
+        .catch(err => {
+          console.error(err);
+          setSyncStatus('error');
+        });
+    }
   };
 
   const updateExpense = (updatedExpense) => {
@@ -203,6 +324,16 @@ export const AppProvider = ({ children }) => {
       expenses: prev.expenses.map(e => e.id === updatedExpense.id ? updatedExpense : e)
     }));
     showToast('تم تعديل المصروف بنجاح');
+
+    if (isSheetsConfigured()) {
+      setSyncStatus('saving');
+      updateExpenseInSheets(updatedExpense)
+        .then(() => setSyncStatus('synced'))
+        .catch(err => {
+          console.error(err);
+          setSyncStatus('error');
+        });
+    }
   };
 
   const deleteExpense = (id) => {
@@ -212,6 +343,16 @@ export const AppProvider = ({ children }) => {
         expenses: prev.expenses.filter(e => e.id !== id)
       }));
       showToast('تم حذف المصروف بنجاح', 'info');
+
+      if (isSheetsConfigured()) {
+        setSyncStatus('saving');
+        deleteExpenseFromSheets(id)
+          .then(() => setSyncStatus('synced'))
+          .catch(err => {
+            console.error(err);
+            setSyncStatus('error');
+          });
+      }
     }
   };
 
@@ -224,6 +365,16 @@ export const AppProvider = ({ children }) => {
       capitalDeposits: [newDeposit, ...prev.capitalDeposits]
     }));
     showToast('تم تسجيل إيداع رأس المال بنجاح');
+
+    if (isSheetsConfigured()) {
+      setSyncStatus('saving');
+      addCapitalDepositToSheets(newDeposit)
+        .then(() => setSyncStatus('synced'))
+        .catch(err => {
+          console.error(err);
+          setSyncStatus('error');
+        });
+    }
   };
 
   const updateCapitalDeposit = (updated) => {
@@ -232,6 +383,16 @@ export const AppProvider = ({ children }) => {
       capitalDeposits: prev.capitalDeposits.map(d => d.id === updated.id ? updated : d)
     }));
     showToast('تم تعديل الإيداع بنجاح');
+
+    if (isSheetsConfigured()) {
+      setSyncStatus('saving');
+      updateCapitalDepositInSheets(updated)
+        .then(() => setSyncStatus('synced'))
+        .catch(err => {
+          console.error(err);
+          setSyncStatus('error');
+        });
+    }
   };
 
   const deleteCapitalDeposit = (id) => {
@@ -241,6 +402,16 @@ export const AppProvider = ({ children }) => {
         capitalDeposits: prev.capitalDeposits.filter(d => d.id !== id)
       }));
       showToast('تم حذف الإيداع', 'info');
+
+      if (isSheetsConfigured()) {
+        setSyncStatus('saving');
+        deleteCapitalDepositFromSheets(id)
+          .then(() => setSyncStatus('synced'))
+          .catch(err => {
+            console.error(err);
+            setSyncStatus('error');
+          });
+      }
     }
   };
 
@@ -261,6 +432,16 @@ export const AppProvider = ({ children }) => {
       beds: prev.beds.map(b => b.id === finalBed.id ? finalBed : b)
     }));
     showToast('تم تحديث بيانات السرير والمستأجر بنجاح');
+
+    if (isSheetsConfigured()) {
+      setSyncStatus('saving');
+      updateBedInSheets(finalBed)
+        .then(() => setSyncStatus('synced'))
+        .catch(err => {
+          console.error(err);
+          setSyncStatus('error');
+        });
+    }
   };
 
   const addBed = (newBed) => {
@@ -276,36 +457,58 @@ export const AppProvider = ({ children }) => {
       ...prev,
       beds: [...prev.beds, bed]
     }));
-    showToast('تم إضاف سرير جديد بنجاح');
+    showToast('تم إضافة سرير جديد بنجاح');
+
+    if (isSheetsConfigured()) {
+      setSyncStatus('saving');
+      addBedToSheets(bed)
+        .then(() => setSyncStatus('synced'))
+        .catch(err => {
+          console.error(err);
+          setSyncStatus('error');
+        });
+    }
   };
 
   // Action: Record Quick Payment for Rent
   const recordRentPayment = (bedId, rentPaidAmount) => {
-    setData(prev => ({
-      ...prev,
-      beds: prev.beds.map(b => {
+    let updatedBedObj = null;
+    setData(prev => {
+      const newBeds = prev.beds.map(b => {
         if (b.id === bedId) {
           const newPaid = Number(rentPaidAmount || 0);
           const newRem = Math.max(0, Number(b.rentRequired || 0) - newPaid);
-          return {
+          updatedBedObj = {
             ...b,
             rentPaid: newPaid,
             rentRemaining: newRem
           };
+          return updatedBedObj;
         }
         return b;
-      })
-    }));
+      });
+      return { ...prev, beds: newBeds };
+    });
     showToast('تم تسديد الإيجار بنجاح');
+
+    if (isSheetsConfigured() && updatedBedObj) {
+      setSyncStatus('saving');
+      updateBedInSheets(updatedBedObj)
+        .then(() => setSyncStatus('synced'))
+        .catch(err => {
+          console.error(err);
+          setSyncStatus('error');
+        });
+    }
   };
 
   // Action: Vacate Bed & Refund Security Deposit
   const vacateBedAndRefund = (bedId, notesReason) => {
-    setData(prev => ({
-      ...prev,
-      beds: prev.beds.map(b => {
+    let updatedBedObj = null;
+    setData(prev => {
+      const newBeds = prev.beds.map(b => {
         if (b.id === bedId) {
-          return {
+          updatedBedObj = {
             ...b,
             status: 'شاغر',
             tenantName: '',
@@ -316,11 +519,23 @@ export const AppProvider = ({ children }) => {
             rentRemaining: 0,
             notes: notesReason || 'تم إخلاء السرير واسترداد التأمين (إبلاغ قبل 15 يوماً)'
           };
+          return updatedBedObj;
         }
         return b;
-      })
-    }));
+      });
+      return { ...prev, beds: newBeds };
+    });
     showToast('تم إخلاء السرير وتسجيل استرداد التأمين للمستأجر', 'info');
+
+    if (isSheetsConfigured() && updatedBedObj) {
+      setSyncStatus('saving');
+      updateBedInSheets(updatedBedObj)
+        .then(() => setSyncStatus('synced'))
+        .catch(err => {
+          console.error(err);
+          setSyncStatus('error');
+        });
+    }
   };
 
   // Actions for Utility Bills
@@ -330,21 +545,31 @@ export const AppProvider = ({ children }) => {
       monthlyBills: prev.monthlyBills.map(b => b.id === updatedBill.id ? updatedBill : b)
     }));
     showToast('تم تحديث الفاتورة الشهرية بنجاح');
+
+    if (isSheetsConfigured()) {
+      setSyncStatus('saving');
+      updateMonthlyBillInSheets(updatedBill)
+        .then(() => setSyncStatus('synced'))
+        .catch(err => {
+          console.error(err);
+          setSyncStatus('error');
+        });
+    }
   };
 
   // Reset to Initial Excel Data
   const resetToInitialData = () => {
-    if (window.confirm('هل أنت متأكد من إعادة ضبط البيانات إلى شيت الإكسيل الأصلي؟ سيتم إلغاء أي تعديلات جديدة.')) {
+    if (window.confirm('هل أنت متأكد من إعادة ضبط البيانات إلى النسخة الأصلية؟')) {
       const init = { ...initialData };
       init.beds = init.beds.map(b => ({ ...b, month: b.month || 'سبتمبر 2026' }));
       setData(init);
       setSelectedMonth('سبتمبر 2026');
       localStorage.removeItem('apartment_management_data_v1');
-      showToast('تمت إعادة ضبط البيانات إلى شيت الإكسيل الأصلي', 'info');
+      showToast('تمت إعادة ضبط البيانات', 'info');
     }
   };
 
-  // Export to Excel
+  // Export to Excel (Backup)
   const exportToExcel = () => {
     const wb = XLSX.utils.book_new();
 
@@ -434,6 +659,13 @@ export const AppProvider = ({ children }) => {
         toast,
         showToast,
         partnersList,
+
+        // Google Sheets Integration
+        syncStatus,
+        isSheetsConnected: isSheetsConfigured(),
+        refreshFromGoogleSheets,
+        syncAllToGoogleSheets,
+        saveGoogleSheetsConfig,
 
         // Totals & Calcs
         totalCapitalDeposits,
