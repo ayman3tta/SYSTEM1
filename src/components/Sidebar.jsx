@@ -1,76 +1,44 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { 
-  LayoutDashboard, 
-  Receipt, 
-  Wallet, 
-  Bed, 
-  Zap, 
-  Scale
+import {
+  LayoutDashboard,
+  Receipt,
+  Wallet,
+  Bed,
+  Zap,
+  Scale,
+  Calculator,
 } from 'lucide-react';
 
 export const Sidebar = () => {
   const { activeTab, setActiveTab, data } = useApp();
 
-  const occupiedBedsCount = data.beds.filter(b => b.status === 'مؤجر').length;
+  const occupiedBedsCount = data.beds.filter((b) => b.status === 'مؤجر').length;
 
-  const navItems = [
-    {
-      id: 'dashboard',
-      label: 'الرئيسية',
-      icon: LayoutDashboard,
-      badge: null,
-      gradient: 'from-blue-500 to-indigo-500',
-      glow: 'shadow-blue-500/40'
-    },
-    {
-      id: 'beds',
-      label: 'السراير',
-      icon: Bed,
-      badge: `${occupiedBedsCount}/${data.beds.length}`,
-      gradient: 'from-violet-500 to-purple-600',
-      glow: 'shadow-violet-500/40'
-    },
-    {
-      id: 'capital',
-      label: 'رأس المال',
-      icon: Wallet,
-      badge: data.capitalDeposits.length || null,
-      gradient: 'from-emerald-500 to-teal-500',
-      glow: 'shadow-emerald-500/40'
-    },
-    {
-      id: 'expenses',
-      label: 'المصروفات',
-      icon: Receipt,
-      badge: data.expenses.length || null,
-      gradient: 'from-amber-500 to-orange-500',
-      glow: 'shadow-amber-500/40'
-    },
-    {
-      id: 'bills',
-      label: 'الفواتير',
-      icon: Zap,
-      badge: null,
-      gradient: 'from-yellow-400 to-amber-500',
-      glow: 'shadow-yellow-500/40'
-    },
-    {
-      id: 'settlement',
-      label: 'التسوية',
-      icon: Scale,
-      badge: null,
-      gradient: 'from-cyan-500 to-blue-500',
-      glow: 'shadow-cyan-500/40'
-    }
+  /* ── Desktop nav items (6 → 5, capital+settlement merged) ── */
+  const desktopItems = [
+    { id: 'dashboard', label: 'الرئيسية',          icon: LayoutDashboard, gradient: 'from-blue-500 to-indigo-500',    glow: 'shadow-blue-500/40',    badge: null },
+    { id: 'beds',      label: 'السراير والمستأجرين', icon: Bed,             gradient: 'from-violet-500 to-purple-600', glow: 'shadow-violet-500/40',  badge: `${occupiedBedsCount}/${data.beds.length}` },
+    { id: 'expenses',  label: 'المصروفات',           icon: Receipt,         gradient: 'from-amber-500 to-orange-500',  glow: 'shadow-amber-500/40',   badge: null },
+    { id: 'bills',     label: 'فواتير الخدمات',      icon: Zap,             gradient: 'from-yellow-400 to-amber-500',  glow: 'shadow-yellow-500/40',  badge: null },
+    { id: 'finance',   label: 'المالية والتسوية',    icon: Calculator,      gradient: 'from-emerald-500 to-teal-500',  glow: 'shadow-emerald-500/40', badge: null },
+  ];
+
+  /* ── Mobile bottom bar (5 tabs) ── */
+  const mobileItems = [
+    { id: 'dashboard', label: 'الرئيسية',   icon: LayoutDashboard },
+    { id: 'beds',      label: 'السراير',    icon: Bed              },
+    { id: 'expenses',  label: 'المصروفات',  icon: Receipt          },
+    { id: 'bills',     label: 'الفواتير',   icon: Zap              },
+    { id: 'finance',   label: 'المالية',    icon: Calculator       },
   ];
 
   return (
     <>
-      {/* Desktop Sidebar */}
+      {/* ── Desktop Sidebar ── */}
       <aside className="hidden md:flex w-56 bg-slate-900/60 border-l border-slate-800 p-3 flex-col gap-1.5 shrink-0 no-print">
         <p className="text-[10px] font-bold text-slate-500 px-3 py-1 uppercase tracking-widest">القائمة الرئيسية</p>
-        {navItems.map(item => {
+        {desktopItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
           return (
@@ -99,51 +67,58 @@ export const Sidebar = () => {
         })}
       </aside>
 
-      {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 no-print" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        {/* Frosted Glass Background */}
-        <div className="bg-slate-950/90 backdrop-blur-2xl border-t border-slate-800/80 shadow-[0_-8px_40px_rgba(0,0,0,0.7)]">
-          <div className="flex items-stretch justify-around px-1 pt-2 pb-2">
-            {navItems.map(item => {
+      {/* ── Mobile Bottom Tab Bar ── */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 no-print"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        {/* Glass pill container */}
+        <div className="bg-slate-950/85 backdrop-blur-2xl border-t border-slate-800/70 shadow-[0_-8px_32px_rgba(0,0,0,0.55)]">
+          <div className="flex items-stretch justify-around px-2 pt-2 pb-1.5">
+            {mobileItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl transition-all duration-200 active:scale-90 relative min-w-0`}
+                  className="flex-1 flex flex-col items-center justify-center gap-0.5 py-0.5 rounded-xl transition-all duration-150 active:scale-90 select-none relative min-w-0"
                 >
-                  {/* Active Indicator */}
-                  {isActive && (
-                    <span className={`absolute inset-0 rounded-xl bg-gradient-to-b ${item.gradient} opacity-15`} />
-                  )}
-                  
-                  {/* Icon Container */}
-                  <div className={`relative w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-200 ${
-                    isActive 
-                      ? `bg-gradient-to-br ${item.gradient} shadow-lg ${item.glow}` 
-                      : 'bg-transparent'
+                  {/* Pill indicator behind icon */}
+                  <div className={`relative flex items-center justify-center w-10 h-7 rounded-full transition-all duration-200 ${
+                    isActive
+                      ? 'bg-indigo-500/15'
+                      : ''
                   }`}>
-                    <Icon className={`w-4 h-4 transition-all ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                    
-                    {/* Badge */}
-                    {item.badge !== null && (
-                      <span className={`absolute -top-1 -right-1.5 text-[9px] font-black px-1 rounded-full leading-tight ${
-                        isActive 
-                          ? 'bg-white text-slate-900' 
-                          : 'bg-slate-700 text-slate-300'
+                    <Icon
+                      className={`w-[22px] h-[22px] transition-all duration-200 ${
+                        isActive
+                          ? 'text-indigo-400 scale-110'
+                          : 'text-slate-500'
+                      }`}
+                      strokeWidth={isActive ? 2.2 : 1.8}
+                    />
+                    {/* Beds badge */}
+                    {item.id === 'beds' && (
+                      <span className={`absolute -top-1 -right-2 text-[9px] font-black px-1 rounded-full leading-tight ${
+                        isActive ? 'bg-indigo-400 text-white' : 'bg-slate-700 text-slate-300'
                       }`}>
-                        {item.badge}
+                        {occupiedBedsCount}/{data.beds.length}
                       </span>
                     )}
                   </div>
 
                   {/* Label */}
-                  <span className={`text-[10px] leading-none font-bold transition-all ${
-                    isActive ? 'text-white' : 'text-slate-600'
+                  <span className={`text-[10px] leading-none transition-all duration-200 ${
+                    isActive ? 'font-bold text-indigo-300' : 'font-medium text-slate-500'
                   }`}>
                     {item.label}
                   </span>
+
+                  {/* Active dot */}
+                  {isActive && (
+                    <span className="w-1 h-1 rounded-full bg-indigo-400 mt-0.5" />
+                  )}
                 </button>
               );
             })}

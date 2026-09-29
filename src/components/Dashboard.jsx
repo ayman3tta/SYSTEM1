@@ -86,7 +86,7 @@ export const Dashboard = () => {
             </div>
           </div>
           <button
-            onClick={() => setActiveTab('capital')}
+            onClick={() => setActiveTab('finance')}
             className="w-full sm:w-auto shrink-0 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all active:scale-95"
           >
             + إضافة إيداع
@@ -104,7 +104,7 @@ export const Dashboard = () => {
           iconColor="text-emerald-400"
           accent="text-emerald-400"
           sub={`${data.capitalDeposits.length} عملية إيداع`}
-          onClick={() => setActiveTab('capital')}
+          onClick={() => setActiveTab('finance')}
         />
         <KpiCard
           label="إجمالي المصروفات"
@@ -185,7 +185,7 @@ export const Dashboard = () => {
             <Users className="w-4 h-4 text-blue-400" />
             موقف الشركاء
           </h3>
-          <button onClick={() => setActiveTab('capital')} className="text-[11px] text-blue-400 font-bold flex items-center gap-1">
+          <button onClick={() => setActiveTab('finance')} className="text-[11px] text-blue-400 font-bold flex items-center gap-1">
             التفاصيل <ChevronLeft className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -227,7 +227,7 @@ export const Dashboard = () => {
 
       {/* ── Settlement CTA ── */}
       <button
-        onClick={() => setActiveTab('settlement')}
+        onClick={() => setActiveTab('finance')}
         className="w-full flex items-center justify-between gap-3 bg-gradient-to-r from-cyan-900/60 to-blue-900/60 border border-cyan-500/20 p-4 rounded-2xl active:scale-98 transition-all"
       >
         <div className="flex items-center gap-3">
