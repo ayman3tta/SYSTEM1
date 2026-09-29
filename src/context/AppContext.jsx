@@ -75,6 +75,7 @@ export const AppProvider = ({ children }) => {
   });
 
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [financeSubTab, setFinanceSubTab] = useState('capital');
   const [selectedMonth, setSelectedMonth] = useState('سبتمبر 2026');
   const [toast, setToast] = useState(null);
   const [syncStatus, setSyncStatus] = useState(isSheetsConfigured() ? 'loading' : 'unconfigured');
@@ -653,6 +654,8 @@ export const AppProvider = ({ children }) => {
         data,
         activeTab,
         setActiveTab,
+        financeSubTab,
+        setFinanceSubTab,
         selectedMonth,
         setSelectedMonth,
         startNewMonth,

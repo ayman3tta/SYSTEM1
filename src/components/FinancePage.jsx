@@ -268,7 +268,7 @@ const SettlementTab = () => {
    Main Finance Page (combined)
 ───────────────────────────────────────────── */
 export const FinancePage = () => {
-  const [subTab, setSubTab] = useState('capital');
+  const { financeSubTab, setFinanceSubTab } = useApp();
 
   return (
     <div className="space-y-4">
@@ -287,9 +287,9 @@ export const FinancePage = () => {
       {/* Sub-tab switcher — pill style */}
       <div className="flex bg-slate-800/70 p-1 rounded-2xl gap-1 border border-slate-700/50">
         <button
-          onClick={() => setSubTab('capital')}
+          onClick={() => setFinanceSubTab('capital')}
           className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-            subTab === 'capital'
+            financeSubTab === 'capital'
               ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/25'
               : 'text-slate-400 hover:text-slate-200'
           }`}
@@ -298,9 +298,9 @@ export const FinancePage = () => {
           رأس المال
         </button>
         <button
-          onClick={() => setSubTab('settlement')}
+          onClick={() => setFinanceSubTab('settlement')}
           className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-            subTab === 'settlement'
+            financeSubTab === 'settlement'
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
               : 'text-slate-400 hover:text-slate-200'
           }`}
@@ -311,7 +311,7 @@ export const FinancePage = () => {
       </div>
 
       {/* Sub-tab content */}
-      {subTab === 'capital' ? <CapitalTab /> : <SettlementTab />}
+      {financeSubTab === 'settlement' ? <SettlementTab /> : <CapitalTab />}
 
     </div>
   );

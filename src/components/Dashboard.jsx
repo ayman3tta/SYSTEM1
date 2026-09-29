@@ -59,6 +59,7 @@ export const Dashboard = () => {
     totalCollectedCurrentRent,
     totalCollectedFromTenants,
     setActiveTab,
+    setFinanceSubTab,
     data
   } = useApp();
 
@@ -86,7 +87,10 @@ export const Dashboard = () => {
             </div>
           </div>
           <button
-            onClick={() => setActiveTab('finance')}
+            onClick={() => {
+              setFinanceSubTab('capital');
+              setActiveTab('finance');
+            }}
             className="w-full sm:w-auto shrink-0 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all active:scale-95"
           >
             + إضافة إيداع
@@ -104,7 +108,10 @@ export const Dashboard = () => {
           iconColor="text-emerald-400"
           accent="text-emerald-400"
           sub={`${data.capitalDeposits.length} عملية إيداع`}
-          onClick={() => setActiveTab('finance')}
+          onClick={() => {
+            setFinanceSubTab('capital');
+            setActiveTab('finance');
+          }}
         />
         <KpiCard
           label="إجمالي المصروفات"
@@ -227,7 +234,10 @@ export const Dashboard = () => {
 
       {/* ── Settlement CTA ── */}
       <button
-        onClick={() => setActiveTab('finance')}
+        onClick={() => {
+          setFinanceSubTab('settlement');
+          setActiveTab('finance');
+        }}
         className="w-full flex items-center justify-between gap-3 bg-gradient-to-r from-cyan-900/60 to-blue-900/60 border border-cyan-500/20 p-4 rounded-2xl active:scale-98 transition-all"
       >
         <div className="flex items-center gap-3">
