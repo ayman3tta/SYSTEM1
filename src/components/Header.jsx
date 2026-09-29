@@ -63,8 +63,7 @@ export const Header = () => {
               <Building2 className="w-5 h-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-sm font-black text-white leading-tight truncate">سيستم شقة الكوثر</h1>
-              <p className="text-[11px] text-slate-400 leading-tight">محمد • أيمن • أحمد</p>
+              <h1 className="text-sm sm:text-base font-black text-white leading-tight truncate">سيستم شقة الكوثر</h1>
             </div>
           </div>
 
