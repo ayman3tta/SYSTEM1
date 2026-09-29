@@ -33,7 +33,7 @@ export function setGoogleScriptUrl(url) {
  * الحصول على رابط شيت جوجل المباشر للمشاهدة
  */
 export function getGoogleSheetLink() {
-  return localStorage.getItem(SHEET_LINK_STORAGE_KEY) || '';
+  return localStorage.getItem(SHEET_LINK_STORAGE_KEY) || 'https://docs.google.com/spreadsheets/d/1QuwOnHcZe9VrBeeQfjYEjrd58ki-1-SsjIZLs75T0tk/edit';
 }
 
 /**
