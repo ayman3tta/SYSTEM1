@@ -15,7 +15,7 @@ export function getGoogleScriptUrl() {
   if (customUrl && customUrl.trim()) {
     return customUrl.trim();
   }
-  return (import.meta.env.VITE_GOOGLE_SCRIPT_URL || '').trim();
+  return (import.meta.env.VITE_GOOGLE_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbzCP0ee1K-W_oydCBVjKI9_mLGlWx_zq20xv2yLQpU4Pwue9fFt46NgKV0DT8rIP8ku7w/exec').trim();
 }
 
 /**
