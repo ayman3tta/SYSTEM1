@@ -71,32 +71,6 @@ export const Header = () => {
           {/* Right Side: Google Sheets + Balance + Actions */}
           <div className="flex items-center gap-2 shrink-0">
             
-            {/* Google Sheets Sync Button / Badge */}
-            <button
-              onClick={() => setSheetsModalOpen(true)}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold transition-all active:scale-95 ${
-                syncStatus === 'synced'
-                  ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60'
-                  : syncStatus === 'saving' || syncStatus === 'loading'
-                  ? 'bg-blue-950/60 border-blue-500/40 text-blue-300 animate-pulse'
-                  : syncStatus === 'error'
-                  ? 'bg-rose-950/60 border-rose-500/40 text-rose-300 hover:bg-rose-900/60'
-                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-              }`}
-              title="إعدادات ومزامنة Google Sheets"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span className="hidden md:inline">
-                {syncStatus === 'synced' && 'Google Sheets متزامن'}
-                {syncStatus === 'saving' && 'جاري الحفظ...'}
-                {syncStatus === 'loading' && 'جاري المزامنة...'}
-                {syncStatus === 'error' && 'خطأ في الربط'}
-                {syncStatus === 'unconfigured' && 'ربط Google Sheets'}
-              </span>
-              <span className="md:hidden">
-                {syncStatus === 'synced' ? '🟢 متزامن' : syncStatus === 'saving' ? '⏳' : 'شيت جوجل'}
-              </span>
-            </button>
 
             {/* Quick Open Google Sheet in Browser (if link exists) */}
             {sheetLink && (
