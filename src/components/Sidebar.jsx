@@ -11,14 +11,12 @@ import {
 } from 'lucide-react';
 
 export const Sidebar = () => {
-  const { activeTab, setActiveTab, data } = useApp();
-
-  const occupiedBedsCount = data.beds.filter((b) => b.status === 'مؤجر').length;
+  const { activeTab, setActiveTab, occupiedBedsCount, totalBedsCount } = useApp();
 
   /* ── Desktop nav items (6 → 5, capital+settlement merged) ── */
   const desktopItems = [
     { id: 'dashboard', label: 'الرئيسية',          icon: LayoutDashboard, gradient: 'from-blue-500 to-indigo-500',    glow: 'shadow-blue-500/40',    badge: null },
-    { id: 'beds',      label: 'السراير والمستأجرين', icon: Bed,             gradient: 'from-violet-500 to-purple-600', glow: 'shadow-violet-500/40',  badge: `${occupiedBedsCount}/${data.beds.length}` },
+    { id: 'beds',      label: 'السراير والمستأجرين', icon: Bed,             gradient: 'from-violet-500 to-purple-600', glow: 'shadow-violet-500/40',  badge: `${occupiedBedsCount}/${totalBedsCount}` },
     { id: 'expenses',  label: 'المصروفات',           icon: Receipt,         gradient: 'from-amber-500 to-orange-500',  glow: 'shadow-amber-500/40',   badge: null },
     { id: 'bills',     label: 'فواتير الخدمات',      icon: Zap,             gradient: 'from-yellow-400 to-amber-500',  glow: 'shadow-yellow-500/40',  badge: null },
     { id: 'finance',   label: 'المالية والتسوية',    icon: Calculator,      gradient: 'from-emerald-500 to-teal-500',  glow: 'shadow-emerald-500/40', badge: null },
@@ -103,7 +101,7 @@ export const Sidebar = () => {
                       <span className={`absolute -top-1 -right-2 text-[9px] font-black px-1 rounded-full leading-tight ${
                         isActive ? 'bg-indigo-400 text-white' : 'bg-slate-700 text-slate-300'
                       }`}>
-                        {occupiedBedsCount}/{data.beds.length}
+                        {occupiedBedsCount}/{totalBedsCount}
                       </span>
                     )}
                   </div>
