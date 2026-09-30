@@ -113,13 +113,6 @@ export const Header = () => {
                 <Download className="w-3.5 h-3.5" />
                 <span className="hidden xl:inline">نسخة احتياطية</span>
               </button>
-              <button
-                onClick={resetToInitialData}
-                className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 transition-colors"
-                title="إعادة الضبط"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
             </div>
 
             {/* Mobile Menu Button */}
