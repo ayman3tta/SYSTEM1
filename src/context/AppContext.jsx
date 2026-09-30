@@ -39,6 +39,24 @@ export const availableMonthsList = [
   'أغسطس 2027'
 ];
 
+// حساب اسم الشهر الفعلي الحالي تلقائياً بناءً على تاريخ اليوم والتقويم
+export const getCurrentMonthName = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const monthIdx = now.getMonth(); // 0: يناير, 8: سبتمبر, 9: أكتوبر, 10: نوفمبر, إلخ
+
+  const arabicMonthNames = [
+    'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+  ];
+
+  const currentCandidate = `${arabicMonthNames[monthIdx]} ${year}`;
+  if (availableMonthsList.includes(currentCandidate)) {
+    return currentCandidate;
+  }
+  return 'أكتوبر 2026';
+};
+
 // التأكد من وجود سراير لجميع الشهور بحيث تبدأ الشهور بعد شهر 9 بإيجار 0
 export const ensureAllMonthsBeds = (beds) => {
   if (!Array.isArray(beds) || beds.length === 0) return beds || [];
@@ -152,19 +170,34 @@ export const AppProvider = ({ children }) => {
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [financeSubTab, setFinanceSubTab] = useState('capital');
-  const [selectedMonth, setSelectedMonth] = useState('سبتمبر 2026');
+  
+  // الشهر المختار يبدأ تلقائياً بالشهر الفعلي الحالي بناءً على تاريخ اليوم (مثلاً أكتوبر 2026)
+  const [selectedMonth, setSelectedMonth] = useState(() => getCurrentMonthName());
 
-  // الشهر الأخير الذي تم تفعيله/بدؤه في النظام (افتراضياً أكتوبر 2026)
+  // الشهر الأخير الذي تم تفعيله/بدؤه في النظام (مرتبط بالتاريخ الفعلي أو المخزن محلياً)
   const [latestStartedMonth, setLatestStartedMonth] = useState(() => {
+    const currentActual = getCurrentMonthName();
     const saved = localStorage.getItem('apartment_latest_started_month_v1');
     if (saved && availableMonthsList.includes(saved)) {
-      return saved;
+      const savedIdx = availableMonthsList.indexOf(saved);
+      const actualIdx = availableMonthsList.indexOf(currentActual);
+      return actualIdx > savedIdx ? currentActual : saved;
     }
-    return 'أكتوبر 2026';
+    return currentActual;
   });
 
   useEffect(() => {
     localStorage.setItem('apartment_latest_started_month_v1', latestStartedMonth);
+  }, [latestStartedMonth]);
+
+  // تحديث الشهر الأحدث تلقائياً إذا دخلنا في شهر جديد حسب التاريخ الفعلي
+  useEffect(() => {
+    const currentActual = getCurrentMonthName();
+    const actualIdx = availableMonthsList.indexOf(currentActual);
+    const latestIdx = availableMonthsList.indexOf(latestStartedMonth);
+    if (actualIdx > latestIdx) {
+      setLatestStartedMonth(currentActual);
+    }
   }, [latestStartedMonth]);
 
   // اختيار وتغيير الشهر مع ضمان وجود سرايره بإيجار 0 إذا لم تكن موجودة
@@ -922,8 +955,9 @@ export const AppProvider = ({ children }) => {
       const init = { ...initialData };
       init.beds = ensureAllMonthsBeds(init.beds);
       setData(init);
-      setSelectedMonth('سبتمبر 2026');
-      setLatestStartedMonth('أكتوبر 2026');
+      const currentActual = getCurrentMonthName();
+      setSelectedMonth(currentActual);
+      setLatestStartedMonth(currentActual);
       localStorage.removeItem('apartment_latest_started_month_v1');
       localStorage.removeItem('apartment_management_data_v1');
       addLocalLog('إعادة ضبط', 'النظام', 'تمت إعادة ضبط بيانات السيستم إلى النسخة الأصلية', '-');
@@ -1033,6 +1067,7 @@ export const AppProvider = ({ children }) => {
         setFinanceSubTab,
         selectedMonth,
         setSelectedMonth: handleSetSelectedMonth,
+        getCurrentMonthName,
         startNewMonth,
         latestStartedMonth,
         setLatestStartedMonth,
