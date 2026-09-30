@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import {
   isSheetsConfigured,
   fetchAllDataFromSheets,
+  fetchActivityLogsFromSheets,
   syncAllDataToSheets,
   addExpenseToSheets,
   updateExpenseInSheets,
@@ -15,6 +16,8 @@ import {
   addBedToSheets,
   batchUpdateBedsInSheets,
   updateMonthlyBillInSheets,
+  logActivityToSheets,
+  getClientDateTime,
   setGoogleScriptUrl,
   setGoogleSheetLink
 } from '../services/googleSheetsService';
@@ -74,6 +77,17 @@ export const AppProvider = ({ children }) => {
     return init;
   });
 
+  // سجل التعديلات والعمليات (Audit Log)
+  const [activityLogs, setActivityLogs] = useState(() => {
+    const savedLogs = localStorage.getItem('apartment_activity_logs_v1');
+    if (savedLogs) {
+      try {
+        return JSON.parse(savedLogs);
+      } catch (e) {}
+    }
+    return [];
+  });
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [financeSubTab, setFinanceSubTab] = useState('capital');
   const [selectedMonth, setSelectedMonth] = useState('سبتمبر 2026');
@@ -90,7 +104,28 @@ export const AppProvider = ({ children }) => {
     localStorage.setItem('apartment_management_data_v1', JSON.stringify(data));
   }, [data]);
 
-  // جلب البيانات من Google Sheets عند بدء التشغيل
+  // Save activityLogs to localStorage
+  useEffect(() => {
+    localStorage.setItem('apartment_activity_logs_v1', JSON.stringify(activityLogs));
+  }, [activityLogs]);
+
+  // إضافة حركة إلى السجل المحلي
+  const addLocalLog = (actionType, section, details, amount = '-', notes = '') => {
+    const { clientDate, clientTime } = getClientDateTime();
+    const newEntry = {
+      id: Date.now(),
+      date: clientDate,
+      time: clientTime,
+      actionType,
+      section,
+      details,
+      amount: amount !== undefined && amount !== null && amount !== '' ? amount : '-',
+      notes: notes || ''
+    };
+    setActivityLogs(prev => [newEntry, ...(prev || []).slice(0, 199)]);
+  };
+
+  // جلب البيانات وسجل العمليات من Google Sheets
   const refreshFromGoogleSheets = useCallback(async (isInitial = false) => {
     if (!isSheetsConfigured()) {
       setSyncStatus('unconfigured');
@@ -124,9 +159,14 @@ export const AppProvider = ({ children }) => {
           monthlyBills: formattedBills.length > 0 ? formattedBills : prev.monthlyBills
         }));
 
+        // تحديث سجل التعديلات والعمليات من الشيت إن وجد
+        if (remoteData.activityLogs && Array.isArray(remoteData.activityLogs) && remoteData.activityLogs.length > 0) {
+          setActivityLogs(remoteData.activityLogs);
+        }
+
         setSyncStatus('synced');
         if (!isInitial) {
-          showToast('تم تحديث البيانات مباشرة من Google Sheets');
+          showToast('تم تحديث البيانات وسجل الحركات مباشرة من Google Sheets');
         }
       } else {
         setSyncStatus('synced');
@@ -147,6 +187,20 @@ export const AppProvider = ({ children }) => {
     }
   }, [refreshFromGoogleSheets]);
 
+  // تحديث سجل النشاطات فقط
+  const refreshActivityLogsOnly = async () => {
+    if (!isSheetsConfigured()) return;
+    try {
+      const logs = await fetchActivityLogsFromSheets();
+      if (logs && Array.isArray(logs) && logs.length > 0) {
+        setActivityLogs(logs);
+        showToast('تم تحديث سجل العمليات من Google Sheets');
+      }
+    } catch (e) {
+      console.error('Failed to fetch activity logs:', e);
+    }
+  };
+
   // رفع كل البيانات دفعة واحدة إلى Google Sheets (ترحيل / مزامنة كاملة)
   const syncAllToGoogleSheets = async () => {
     if (!isSheetsConfigured()) {
@@ -157,6 +211,7 @@ export const AppProvider = ({ children }) => {
     try {
       setSyncStatus('saving');
       await syncAllDataToSheets(data);
+      addLocalLog('مزامنة شاملة', 'النظام', 'تم رفع وتحديث كامل بيانات السيستم في Google Sheets بنجاح', '-');
       setSyncStatus('synced');
       showToast('تم رفع ومزامنة جميع البيانات إلى Google Sheets بنجاح! 🚀');
       return true;
@@ -285,6 +340,12 @@ export const AppProvider = ({ children }) => {
     }));
 
     setSelectedMonth(targetMonth);
+    addLocalLog(
+      'ترحيل شهر جديد',
+      'السراير والمستأجرين',
+      `بدء وترحيل شهر جديد: ${targetMonth} مع ترحيل المستأجرين النشطين (عدد ${newBeds.length} سرير)`,
+      '-'
+    );
     showToast(`تم تفعيل شهر ${targetMonth} وترحيل المستأجرين`);
 
     if (isSheetsConfigured()) {
@@ -306,7 +367,16 @@ export const AppProvider = ({ children }) => {
       ...prev,
       expenses: [newExpense, ...prev.expenses]
     }));
-    showToast('تمت إضافة المصروف بنجاح');
+
+    addLocalLog(
+      'إضافة مصروف',
+      'المصروفات',
+      `إضافة مصروف جديد: ${newExpense.item} بمبلغ (${Number(newExpense.amount).toLocaleString()} ج.م) - القائم بالصرف: ${newExpense.paidBy || 'غير محدد'}`,
+      newExpense.amount,
+      newExpense.notes
+    );
+
+    showToast('تمت إضافة المصروف بنجاح وتسجيله في سجل التعديلات');
 
     if (isSheetsConfigured()) {
       setSyncStatus('saving');
@@ -324,7 +394,16 @@ export const AppProvider = ({ children }) => {
       ...prev,
       expenses: prev.expenses.map(e => e.id === updatedExpense.id ? updatedExpense : e)
     }));
-    showToast('تم تعديل المصروف بنجاح');
+
+    addLocalLog(
+      'تعديل مصروف',
+      'المصروفات',
+      `تعديل بيانات المصروف #${updatedExpense.id}: ${updatedExpense.item} بمبلغ (${Number(updatedExpense.amount).toLocaleString()} ج.م) - القائم بالصرف: ${updatedExpense.paidBy || 'غير محدد'}`,
+      updatedExpense.amount,
+      updatedExpense.notes
+    );
+
+    showToast('تم تعديل المصروف وتسجيل التعديل في سجل جوجل شيت');
 
     if (isSheetsConfigured()) {
       setSyncStatus('saving');
@@ -338,16 +417,30 @@ export const AppProvider = ({ children }) => {
   };
 
   const deleteExpense = (id) => {
-    if (window.confirm('هل أنت متأكد من حذف هذا المصروف؟')) {
+    const target = data.expenses.find(e => e.id === id);
+    const itemName = target ? target.item : '';
+    const itemAmount = target ? target.amount : 0;
+    const itemNotes = target ? target.notes : '';
+
+    if (window.confirm(`هل أنت متأكد من حذف هذا المصروف: "${itemName}" بمبلغ ${itemAmount} ج.م؟`)) {
       setData(prev => ({
         ...prev,
         expenses: prev.expenses.filter(e => e.id !== id)
       }));
-      showToast('تم حذف المصروف بنجاح', 'info');
+
+      addLocalLog(
+        'حذف مصروف',
+        'المصروفات',
+        `حذف المصروف #${id}: ${itemName} بمبلغ (${Number(itemAmount).toLocaleString()} ج.م)`,
+        itemAmount,
+        itemNotes
+      );
+
+      showToast('تم حذف المصروف وتسجيل حركة الحذف في سجل جوجل شيت', 'info');
 
       if (isSheetsConfigured()) {
         setSyncStatus('saving');
-        deleteExpenseFromSheets(id)
+        deleteExpenseFromSheets({ id, item: itemName, amount: itemAmount, notes: itemNotes })
           .then(() => setSyncStatus('synced'))
           .catch(err => {
             console.error(err);
@@ -365,7 +458,16 @@ export const AppProvider = ({ children }) => {
       ...prev,
       capitalDeposits: [newDeposit, ...prev.capitalDeposits]
     }));
-    showToast('تم تسجيل إيداع رأس المال بنجاح');
+
+    addLocalLog(
+      'إضافة إيداع',
+      'إيداعات رأس المال',
+      `إيداع رأس مال جديد للشريك: ${newDeposit.partner} بمبلغ (${Number(newDeposit.amount).toLocaleString()} ج.م)`,
+      newDeposit.amount,
+      newDeposit.date ? `تاريخ الإيداع: ${newDeposit.date}` : ''
+    );
+
+    showToast('تم تسجيل إيداع رأس المال وحفظه في سجل العمليات');
 
     if (isSheetsConfigured()) {
       setSyncStatus('saving');
@@ -383,7 +485,16 @@ export const AppProvider = ({ children }) => {
       ...prev,
       capitalDeposits: prev.capitalDeposits.map(d => d.id === updated.id ? updated : d)
     }));
-    showToast('تم تعديل الإيداع بنجاح');
+
+    addLocalLog(
+      'تعديل إيداع',
+      'إيداعات رأس المال',
+      `تعديل إيداع رأس مال #${updated.id} للشريك: ${updated.partner} بمبلغ (${Number(updated.amount).toLocaleString()} ج.م)`,
+      updated.amount,
+      updated.date ? `تاريخ الإيداع: ${updated.date}` : ''
+    );
+
+    showToast('تم تعديل الإيداع وتسجيل التعديل في سجل الشيت');
 
     if (isSheetsConfigured()) {
       setSyncStatus('saving');
@@ -397,16 +508,30 @@ export const AppProvider = ({ children }) => {
   };
 
   const deleteCapitalDeposit = (id) => {
-    if (window.confirm('هل أنت متأكد من حذف هذا الإيداع؟')) {
+    const target = data.capitalDeposits.find(d => d.id === id);
+    const partnerName = target ? target.partner : '';
+    const depositAmount = target ? target.amount : 0;
+    const depositDate = target ? target.date : '';
+
+    if (window.confirm(`هل أنت متأكد من حذف هذا الإيداع للشريك: ${partnerName} بمبلغ ${depositAmount} ج.م؟`)) {
       setData(prev => ({
         ...prev,
         capitalDeposits: prev.capitalDeposits.filter(d => d.id !== id)
       }));
-      showToast('تم حذف الإيداع', 'info');
+
+      addLocalLog(
+        'حذف إيداع',
+        'إيداعات رأس المال',
+        `حذف إيداع رأس مال #${id} للشريك: ${partnerName} بمبلغ (${Number(depositAmount).toLocaleString()} ج.م)`,
+        depositAmount,
+        depositDate
+      );
+
+      showToast('تم حذف الإيداع وتسجيل الحركة في سجل جوجل شيت', 'info');
 
       if (isSheetsConfigured()) {
         setSyncStatus('saving');
-        deleteCapitalDepositFromSheets(id)
+        deleteCapitalDepositFromSheets({ id, partner: partnerName, amount: depositAmount, date: depositDate })
           .then(() => setSyncStatus('synced'))
           .catch(err => {
             console.error(err);
@@ -432,7 +557,16 @@ export const AppProvider = ({ children }) => {
       ...prev,
       beds: prev.beds.map(b => b.id === finalBed.id ? finalBed : b)
     }));
-    showToast('تم تحديث بيانات السرير والمستأجر بنجاح');
+
+    addLocalLog(
+      'تعديل سرير / مستأجر',
+      'السراير والمستأجرين',
+      `تحديث بيانات ${finalBed.roomName} - سرير ${finalBed.bedNumber} (${finalBed.month}) - المستأجر: ${finalBed.tenantName || 'شاغر'} - الحالة: ${finalBed.status}`,
+      finalBed.rentPaid || finalBed.monthlyPrice,
+      finalBed.notes
+    );
+
+    showToast('تم تحديث بيانات السرير والمستأجر بنجاح وتسجيلها في الشيت');
 
     if (isSheetsConfigured()) {
       setSyncStatus('saving');
@@ -458,7 +592,16 @@ export const AppProvider = ({ children }) => {
       ...prev,
       beds: [...prev.beds, bed]
     }));
-    showToast('تم إضافة سرير جديد بنجاح');
+
+    addLocalLog(
+      'إضافة سرير',
+      'السراير والمستأجرين',
+      `إضافة سرير جديد: ${bed.roomName} - سرير ${bed.bedNumber} (${bed.month}) - السعر: ${bed.monthlyPrice} ج.م`,
+      bed.monthlyPrice,
+      `المستأجر: ${bed.tenantName || 'شاغر'}`
+    );
+
+    showToast('تمت إضافة سرير جديد وتسجيل الحركة في سجل جوجل شيت');
 
     if (isSheetsConfigured()) {
       setSyncStatus('saving');
@@ -490,11 +633,27 @@ export const AppProvider = ({ children }) => {
       });
       return { ...prev, beds: newBeds };
     });
-    showToast('تم تسديد الإيجار بنجاح');
+
+    if (updatedBedObj) {
+      addLocalLog(
+        'تسديد إيجار',
+        'السراير والمستأجرين',
+        `تسديد إيجار سرير: ${updatedBedObj.roomName} سرير ${updatedBedObj.bedNumber} للمستأجر "${updatedBedObj.tenantName}" - تم سداد: ${Number(rentPaidAmount).toLocaleString()} ج.م (المتبقي: ${updatedBedObj.rentRemaining} ج.م)`,
+        rentPaidAmount,
+        updatedBedObj.notes || ''
+      );
+    }
+
+    showToast('تم تسديد الإيجار وتسجيل الحركة بالتاريخ والوقت في سجل الشيت');
 
     if (isSheetsConfigured() && updatedBedObj) {
       setSyncStatus('saving');
-      updateBedInSheets(updatedBedObj)
+      updateBedInSheets({
+        ...updatedBedObj,
+        _customActionType: 'تسديد إيجار',
+        _customDetails: `تسديد إيجار سرير: ${updatedBedObj.roomName} سرير ${updatedBedObj.bedNumber} للمستأجر "${updatedBedObj.tenantName}" - سداد: ${rentPaidAmount} ج.م`,
+        _customAmount: rentPaidAmount
+      })
         .then(() => setSyncStatus('synced'))
         .catch(err => {
           console.error(err);
@@ -506,7 +665,10 @@ export const AppProvider = ({ children }) => {
   // Action: Vacate Bed & Refund Security Deposit
   const vacateBedAndRefund = (bedId, notesReason) => {
     let updatedBedObj = null;
+    let prevTenant = '';
     setData(prev => {
+      const target = prev.beds.find(b => b.id === bedId);
+      prevTenant = target ? target.tenantName : '';
       const newBeds = prev.beds.map(b => {
         if (b.id === bedId) {
           updatedBedObj = {
@@ -526,11 +688,27 @@ export const AppProvider = ({ children }) => {
       });
       return { ...prev, beds: newBeds };
     });
-    showToast('تم إخلاء السرير وتسجيل استرداد التأمين للمستأجر', 'info');
+
+    if (updatedBedObj) {
+      addLocalLog(
+        'إخلاء سرير',
+        'السراير والمستأجرين',
+        `إخلاء سرير: ${updatedBedObj.roomName} سرير ${updatedBedObj.bedNumber} - المستأجر: ${prevTenant} - (${notesReason || 'استرداد التأمين'})`,
+        '-',
+        updatedBedObj.notes
+      );
+    }
+
+    showToast('تم إخلاء السرير وتسجيل استرداد التأمين في سجل العمليات', 'info');
 
     if (isSheetsConfigured() && updatedBedObj) {
       setSyncStatus('saving');
-      updateBedInSheets(updatedBedObj)
+      updateBedInSheets({
+        ...updatedBedObj,
+        _customActionType: 'إخلاء سرير',
+        _customDetails: `إخلاء سرير: ${updatedBedObj.roomName} سرير ${updatedBedObj.bedNumber} - المستأجر السابق: ${prevTenant} (${notesReason || 'استرداد تأمين'})`,
+        _customAmount: '-'
+      })
         .then(() => setSyncStatus('synced'))
         .catch(err => {
           console.error(err);
@@ -545,7 +723,18 @@ export const AppProvider = ({ children }) => {
       ...prev,
       monthlyBills: prev.monthlyBills.map(b => b.id === updatedBill.id ? updatedBill : b)
     }));
-    showToast('تم تحديث الفاتورة الشهرية بنجاح');
+
+    const totalBills = Number(updatedBill.electricity || 0) + Number(updatedBill.water || 0) + Number(updatedBill.gas || 0) + Number(updatedBill.internet || 0);
+
+    addLocalLog(
+      'تعديل فواتير شهرية',
+      'الفواتير الشهرية',
+      `تعديل فواتير شهر ${updatedBill.month} - كهرباء: ${updatedBill.electricity} | مياه: ${updatedBill.water} | غاز: ${updatedBill.gas} | نت: ${updatedBill.internet} ج.م (الإجمالي: ${totalBills} ج.م)`,
+      totalBills,
+      updatedBill.notes
+    );
+
+    showToast('تم تحديث الفاتورة الشهرية وتسجيلها في سجل الشيت');
 
     if (isSheetsConfigured()) {
       setSyncStatus('saving');
@@ -566,11 +755,12 @@ export const AppProvider = ({ children }) => {
       setData(init);
       setSelectedMonth('سبتمبر 2026');
       localStorage.removeItem('apartment_management_data_v1');
+      addLocalLog('إعادة ضبط', 'النظام', 'تمت إعادة ضبط بيانات السيستم إلى النسخة الأصلية', '-');
       showToast('تمت إعادة ضبط البيانات', 'info');
     }
   };
 
-  // Export to Excel (Backup)
+  // Export to Excel (Backup with all 5 sheets including Audit Log)
   const exportToExcel = () => {
     const wb = XLSX.utils.book_new();
 
@@ -644,8 +834,22 @@ export const AppProvider = ({ children }) => {
     const wsBills = XLSX.utils.json_to_sheet(wsBillsData);
     XLSX.utils.book_append_sheet(wb, wsBills, 'الفواتير الشهرية');
 
+    // Sheet 5: سجل التعديلات والعمليات
+    const wsLogsData = (activityLogs || []).map(l => ({
+      'م': l.id,
+      'التاريخ': l.date,
+      'الساعة والوقت': l.time,
+      'نوع العملية': l.actionType,
+      'القسم': l.section,
+      'تفاصيل الحركة والتعديل': l.details,
+      'المبلغ / القيمة': l.amount,
+      'ملاحظات وبيان': l.notes
+    }));
+    const wsLogs = XLSX.utils.json_to_sheet(wsLogsData);
+    XLSX.utils.book_append_sheet(wb, wsLogs, 'سجل التعديلات والعمليات');
+
     XLSX.writeFile(wb, `متابعة_مصاريف_الشقة_${new Date().toISOString().split('T')[0]}.xlsx`);
-    showToast('تم تصدير ملف الإكسيل بنجاح');
+    showToast('تم تصدير ملف الإكسيل مع سجل التعديلات بنجاح');
   };
 
   return (
@@ -669,6 +873,10 @@ export const AppProvider = ({ children }) => {
         refreshFromGoogleSheets,
         syncAllToGoogleSheets,
         saveGoogleSheetsConfig,
+
+        // Activity Logs (سجل التعديلات والعمليات)
+        activityLogs,
+        refreshActivityLogsOnly,
 
         // Totals & Calcs
         totalCapitalDeposits,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { GoogleSheetsModal } from './GoogleSheetsModal';
+import { ActivityLogModal } from './ActivityLogModal';
 import { getGoogleSheetLink } from '../services/googleSheetsService';
 import {
   Download,
@@ -13,8 +14,7 @@ import {
   TrendingDown,
   FileSpreadsheet,
   ExternalLink,
-  CheckCircle2,
-  AlertCircle
+  History
 } from 'lucide-react';
 
 export const Header = () => {
@@ -26,11 +26,13 @@ export const Header = () => {
     resetToInitialData,
     toast,
     syncStatus,
-    isSheetsConnected
+    isSheetsConnected,
+    activityLogs
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sheetsModalOpen, setSheetsModalOpen] = useState(false);
+  const [activityModalOpen, setActivityModalOpen] = useState(false);
   const isDeficit = remainingCapitalPool < 0;
   const sheetLink = getGoogleSheetLink();
 
@@ -52,6 +54,13 @@ export const Header = () => {
       <GoogleSheetsModal
         isOpen={sheetsModalOpen}
         onClose={() => setSheetsModalOpen(false)}
+        onOpenActivityLog={() => { setSheetsModalOpen(false); setActivityModalOpen(true); }}
+      />
+
+      {/* Activity Logs Modal (سجل التعديلات والعمليات) */}
+      <ActivityLogModal
+        isOpen={activityModalOpen}
+        onClose={() => setActivityModalOpen(false)}
       />
 
       <div className="px-3 sm:px-4 py-3">
@@ -67,9 +76,35 @@ export const Header = () => {
             </div>
           </div>
 
-          {/* Right Side: Google Sheets + Balance + Actions */}
+          {/* Right Side: Google Sheets + Activity Log + Balance + Actions */}
           <div className="flex items-center gap-2 shrink-0">
-            
+
+            {/* Activity Log Button (سجل التعديلات والعمليات) */}
+            <button
+              onClick={() => setActivityModalOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold transition-all active:scale-95"
+              title="سجل التعديلات والعمليات المباشر (Google Sheets Log)"
+            >
+              <History className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden sm:inline">سجل التعديلات</span>
+              {(activityLogs || []).length > 0 && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-500/30 text-indigo-200 font-mono">
+                  {(activityLogs || []).length}
+                </span>
+              )}
+            </button>
+
+            {/* Google Sheets Connection Modal Button */}
+            <button
+              onClick={() => setSheetsModalOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all active:scale-95"
+              title="ربط ومزامنة Google Sheets"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Google Sheets</span>
+              {syncStatus === 'saving' && <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />}
+              {syncStatus === 'synced' && <span className="w-2 h-2 rounded-full bg-emerald-400" />}
+            </button>
 
             {/* Quick Open Google Sheet in Browser (if link exists) */}
             {sheetLink && (
@@ -136,6 +171,13 @@ export const Header = () => {
         {mobileMenuOpen && (
           <div className="sm:hidden mt-3 pt-3 border-t border-slate-800 grid grid-cols-4 gap-2 animate-slide-up">
             <button
+              onClick={() => { setActivityModalOpen(true); setMobileMenuOpen(false); }}
+              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-[11px] font-bold active:scale-95"
+            >
+              <History className="w-4 h-4 text-indigo-400" />
+              سجل التعديلات
+            </button>
+            <button
               onClick={() => { setSheetsModalOpen(true); setMobileMenuOpen(false); }}
               className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[11px] font-bold active:scale-95"
             >
@@ -148,13 +190,6 @@ export const Header = () => {
             >
               <Download className="w-4 h-4" />
               نسخة Excel
-            </button>
-            <button
-              onClick={() => { window.print(); setMobileMenuOpen(false); }}
-              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 text-[11px] font-medium active:scale-95"
-            >
-              <Printer className="w-4 h-4" />
-              طباعة
             </button>
             <button
               onClick={() => { resetToInitialData(); setMobileMenuOpen(false); }}

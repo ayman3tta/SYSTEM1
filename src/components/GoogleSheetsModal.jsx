@@ -18,16 +18,18 @@ import {
   X,
   RefreshCw,
   HelpCircle,
-  Save
+  Save,
+  History
 } from 'lucide-react';
 
-export const GoogleSheetsModal = ({ isOpen, onClose }) => {
+export const GoogleSheetsModal = ({ isOpen, onClose, onOpenActivityLog }) => {
   const {
     syncStatus,
     refreshFromGoogleSheets,
     syncAllToGoogleSheets,
     saveGoogleSheetsConfig,
-    showToast
+    showToast,
+    activityLogs
   } = useApp();
 
   const [scriptUrl, setScriptUrl] = useState('');
@@ -61,7 +63,6 @@ export const GoogleSheetsModal = ({ isOpen, onClose }) => {
     setTesting(true);
     setTestResult(null);
     try {
-      // Save temporarily to test
       saveGoogleSheetsConfig(scriptUrl, sheetLink);
       const res = await testConnection();
       setTestResult({
@@ -95,7 +96,7 @@ export const GoogleSheetsModal = ({ isOpen, onClose }) => {
     navigator.clipboard.writeText(APPS_SCRIPT_CODE);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2500);
-    showToast('تم نسخ كود Google Apps Script بنجاح');
+    showToast('تم نسخ كود Google Apps Script المحدث (مع سجل التعديلات) بنجاح');
   };
 
   return (
@@ -113,7 +114,7 @@ export const GoogleSheetsModal = ({ isOpen, onClose }) => {
                 ربط Google Sheets أونلاين
               </h2>
               <p className="text-xs text-slate-400">
-                مزامنة لحظية وتخزين سحابي مباشر على جوجل شيت
+                مزامنة لحظية وتخزين سحابي مباشر مع صفحة مخصصة لسجل التعديلات
               </p>
             </div>
           </div>
@@ -163,17 +164,30 @@ export const GoogleSheetsModal = ({ isOpen, onClose }) => {
               )}
             </div>
 
-            {sheetLink && (
-              <a
-                href={sheetLink}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all active:scale-95"
-              >
-                <span>فتح شيت جوجل للمتابعة</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            )}
+            <div className="flex items-center gap-2">
+              {onOpenActivityLog && (
+                <button
+                  type="button"
+                  onClick={onOpenActivityLog}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 text-xs font-bold transition-all"
+                >
+                  <History className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>سجل التعديلات ({(activityLogs || []).length})</span>
+                </button>
+              )}
+
+              {sheetLink && (
+                <a
+                  href={sheetLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all active:scale-95"
+                >
+                  <span>فتح شيت جوجل للمتابعة</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </div>
           </div>
 
           {/* Apps Script Web App URL */}
@@ -219,7 +233,7 @@ export const GoogleSheetsModal = ({ isOpen, onClose }) => {
             />
           </div>
 
-          {/* Test Connection Button & Result */}
+          {/* Action Buttons & Result */}
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2.5">
               <button
@@ -273,40 +287,43 @@ export const GoogleSheetsModal = ({ isOpen, onClose }) => {
             >
               <span className="flex items-center gap-2 text-indigo-400">
                 <HelpCircle className="w-4 h-4" />
-                كيف تجهز Google Sheet لأول مرة؟ (خطوات سريعة بالصور)
+                طريقة التحديث أو التركيب لأول مرة (مع صفحة سجل التعديلات والعمليات)
               </span>
               <span>{showInstructions ? '▲ إخفاء' : '▼ عرض الخطوات'}</span>
             </button>
 
             {showInstructions && (
               <div className="mt-3 p-4 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-3 text-xs text-slate-300 leading-relaxed animate-slide-up">
+                <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-indigo-200 mb-2">
+                  <p className="font-bold mb-1">📌 الجداول الـ 6 المنشأة في شيت جوجل:</p>
+                  <ul className="list-disc list-inside space-y-0.5 text-[11px] text-indigo-300">
+                    <li><strong>المصروفات</strong></li>
+                    <li><strong>إيداعات رأس المال</strong></li>
+                    <li><strong>تفاصيل السراير والمستأجرين</strong></li>
+                    <li><strong>الفواتير الشهرية</strong></li>
+                    <li><strong>الشركاء ورأس المال</strong></li>
+                    <li><strong className="text-emerald-300 underline">سجل التعديلات والعمليات:</strong> يسجل آلياً التاريخ، الوقت، نوع الحركة (إضافة/تعديل/حذف/تسديد/إخلاء)، وبيان ما تم تغييره.</li>
+                  </ul>
+                </div>
+
                 <ol className="list-decimal list-inside space-y-2 text-slate-300">
                   <li>
-                    افتح شيت جوجل جديد من الرابط:{' '}
-                    <a href="https://sheets.new" target="_blank" rel="noreferrer" className="text-emerald-400 underline font-mono">
-                      sheets.new
-                    </a>
+                    اضغط زر <strong className="text-indigo-400 font-bold">"نسخ كود Apps Script المحدث"</strong> بالأسفل.
                   </li>
                   <li>
-                    من القائمة العلوية في جوجل شيت اضغط: <strong className="text-white">Extensions (الإضافات)</strong> ➔ <strong className="text-white">Apps Script</strong>.
+                    في شيت جوجل، اضغط من القائمة: <strong className="text-white">Extensions (الإضافات)</strong> ➔ <strong className="text-white">Apps Script</strong>.
                   </li>
                   <li>
-                    امسح أي كود موجود في المحرر وضع بدلاً منه كود <code className="bg-slate-800 px-1 py-0.5 rounded text-amber-300">google_apps_script.js</code> الموجود في المشروع.
+                    امسح أي كود موجود والصق الكود الجديد ثم احفظ (Ctrl + S).
                   </li>
                   <li>
-                    اضغط على الزر الأزرق أعلى اليمين: <strong className="text-white">Deploy ➔ New deployment</strong>.
+                    من أعلى اليمين اضغط: <strong className="text-white">Deploy ➔ Manage deployments</strong> (إدارة عمليات النشر).
                   </li>
                   <li>
-                    اضغط على أيقونة الترس بجانب Select type واختر <strong className="text-emerald-400">Web app</strong>.
+                    اضغط على أيقونة القلم ✏️ للتعديل، ثم في خانة Version اختر <strong className="text-emerald-400 font-bold">New version</strong> واضغط <strong className="text-white">Deploy</strong>.
                   </li>
                   <li>
-                    في خانة <strong className="text-white">Who has access</strong> اختر: <strong className="text-amber-400">Anyone (أي شخص)</strong> حتى يتصل السيستم بدون تسجيل دخول معقد.
-                  </li>
-                  <li>
-                    اضغط <strong className="text-white">Deploy</strong> ووافق على الصلاحيات، ثم انسخ رابط الـ Web app وضعه في الخانة بالأعلى واضغط حفظ!
-                  </li>
-                  <li>
-                    أخيراً، اضغط زر <strong className="text-emerald-400 font-bold">"رفع كل بيانات السيستم الحالية إلى شيت جوجل"</strong> ليتم إنشاء كل الجداول وملؤها بالبيانات فوراً!
+                    الآن أي تعديل أو إضافة أو حذف لأي بند في السيستم سيتم تدوينه مباشرة في صفحة <strong>"سجل التعديلات والعمليات"</strong> مع التاريخ والساعة الدقيقة!
                   </li>
                 </ol>
 
@@ -314,10 +331,10 @@ export const GoogleSheetsModal = ({ isOpen, onClose }) => {
                   <button
                     type="button"
                     onClick={copyScriptCode}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/20"
                   >
                     {copiedCode ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedCode ? 'تم النسخ!' : 'نسخ كود Apps Script'}</span>
+                    <span>{copiedCode ? 'تم النسخ بنجاح!' : 'نسخ كود Apps Script المحدث 📋'}</span>
                   </button>
                 </div>
               </div>
@@ -329,7 +346,7 @@ export const GoogleSheetsModal = ({ isOpen, onClose }) => {
         {/* Footer */}
         <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
           <p className="text-[11px] text-slate-500">
-            البيانات تحفظ فورياً في شيت جوجل ومتزامنة على كل الأجهزة
+            البيانات وسجل التعديلات تحفظ فورياً في شيت جوجل ومتزامنة على كل الأجهزة
           </p>
           <button
             onClick={onClose}

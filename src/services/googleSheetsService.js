@@ -7,6 +7,26 @@ const SCRIPT_STORAGE_KEY = 'apartment_google_script_url';
 const SHEET_LINK_STORAGE_KEY = 'apartment_google_sheet_link';
 
 /**
+ * دالة مساعدة لاستخراج التاريخ والوقت المحليين للعميل
+ */
+export function getClientDateTime() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${day}`;
+
+  const hours = now.getHours();
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const period = hours >= 12 ? 'م' : 'ص';
+  const hours12 = hours % 12 || 12;
+  const timeStr = `${String(hours12).padStart(2, '0')}:${minutes}:${seconds} ${period}`;
+
+  return { clientDate: dateStr, clientTime: timeStr };
+}
+
+/**
  * الحصول على رابط Google Apps Script Web App
  * الأولوية للمحفوظ في المتصفح، ثم المتغير البيئي في Vite
  */
@@ -109,6 +129,24 @@ export async function fetchAllDataFromSheets() {
 }
 
 /**
+ * جلب سجل التعديلات والعمليات فقط
+ */
+export async function fetchActivityLogsFromSheets() {
+  const url = getGoogleScriptUrl();
+  if (!url) return [];
+
+  const separator = url.includes('?') ? '&' : '?';
+  const response = await fetch(`${url}${separator}action=getActivityLogs`, {
+    method: 'GET',
+    redirect: 'follow'
+  });
+
+  if (!response.ok) return [];
+  const result = await response.json();
+  return result.success ? (result.data || []) : [];
+}
+
+/**
  * دالة مساعدة لإرسال البيانات بالـ POST إلى Google Apps Script
  * نستخدم text/plain لتفادي إرسال CORS Preflight OPTIONS من المتصفح
  */
@@ -119,13 +157,27 @@ async function postToSheets(action, payload) {
     return null;
   }
 
+  // إضافة التاريخ والوقت تلقائياً للحركة
+  const { clientDate, clientTime } = getClientDateTime();
+  let preparedPayload = payload;
+
+  if (Array.isArray(payload)) {
+    preparedPayload = payload.map(p => typeof p === 'object' && p !== null ? { _clientDate: clientDate, _clientTime: clientTime, ...p } : p);
+  } else if (typeof payload === 'object' && payload !== null) {
+    preparedPayload = {
+      _clientDate: clientDate,
+      _clientTime: clientTime,
+      ...payload
+    };
+  }
+
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8'
       },
-      body: JSON.stringify({ action, payload }),
+      body: JSON.stringify({ action, payload: preparedPayload }),
       redirect: 'follow'
     });
 
@@ -150,15 +202,26 @@ async function postToSheets(action, payload) {
  */
 export const syncAllDataToSheets = (fullData) => postToSheets('syncAllData', fullData);
 
+/**
+ * تسجيل حركة مخصصة في سجل التعديلات
+ */
+export const logActivityToSheets = (activity) => postToSheets('logActivity', activity);
+
 // المصروفات
 export const addExpenseToSheets = (expense) => postToSheets('addExpense', expense);
 export const updateExpenseInSheets = (expense) => postToSheets('updateExpense', expense);
-export const deleteExpenseFromSheets = (id) => postToSheets('deleteExpense', { id });
+export const deleteExpenseFromSheets = (expenseData) => {
+  const payload = typeof expenseData === 'object' && expenseData !== null ? expenseData : { id: expenseData };
+  return postToSheets('deleteExpense', payload);
+};
 
 // إيداعات رأس المال
 export const addCapitalDepositToSheets = (deposit) => postToSheets('addCapitalDeposit', deposit);
 export const updateCapitalDepositInSheets = (deposit) => postToSheets('updateCapitalDeposit', deposit);
-export const deleteCapitalDepositFromSheets = (id) => postToSheets('deleteCapitalDeposit', { id });
+export const deleteCapitalDepositFromSheets = (depositData) => {
+  const payload = typeof depositData === 'object' && depositData !== null ? depositData : { id: depositData };
+  return postToSheets('deleteCapitalDeposit', payload);
+};
 
 // السراير والمستأجرين
 export const updateBedInSheets = (bed) => postToSheets('updateBed', bed);
