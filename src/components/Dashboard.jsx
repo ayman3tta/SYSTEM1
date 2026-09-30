@@ -1,5 +1,5 @@
 import React from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, availableMonthsList } from '../context/AppContext';
 import { 
   Wallet, 
   TrendingDown, 
@@ -11,7 +11,9 @@ import {
   Calculator,
   AlertTriangle,
   CheckCircle2,
-  ChevronLeft
+  ChevronLeft,
+  Calendar,
+  Layers
 } from 'lucide-react';
 
 const KpiCard = ({ label, value, unit = 'ج.م', icon: Icon, iconBg, iconColor, sub, onClick, accent }) => (
@@ -58,6 +60,8 @@ export const Dashboard = () => {
     totalRemainingDeposit,
     totalCollectedCurrentRent,
     totalCollectedFromTenants,
+    selectedMonth,
+    setSelectedMonth,
     setActiveTab,
     setFinanceSubTab,
     data
@@ -65,6 +69,20 @@ export const Dashboard = () => {
 
   const partnersStats = partnersList.map(name => getPartnerStats(name));
   const isDeficit = remainingCapitalPool < 0;
+
+  // Previous Month Calculations
+  const currentMonthIdx = availableMonthsList.indexOf(selectedMonth);
+  const prevMonthName = currentMonthIdx > 0 ? availableMonthsList[currentMonthIdx - 1] : null;
+
+  const prevMonthBeds = prevMonthName ? data.beds.filter(b => b.month === prevMonthName) : [];
+  const hasPrevMonthData = prevMonthBeds.length > 0;
+  const prevBedsCount = prevMonthBeds.length;
+  const prevOccupiedCount = prevMonthBeds.filter(b => b.status === 'مؤجر').length;
+  const prevOccupancyRate = prevBedsCount > 0 ? Math.round((prevOccupiedCount / prevBedsCount) * 100) : 0;
+  const prevRentCollected = prevMonthBeds.reduce((acc, b) => acc + Number(b.rentPaid || 0), 0);
+  const prevDepositCollected = prevMonthBeds.reduce((acc, b) => acc + Number(b.depositPaid || 0), 0);
+  const prevTotalCollected = prevRentCollected + prevDepositCollected;
+  const prevExpectedRent = prevMonthBeds.reduce((acc, b) => acc + Number(b.monthlyPrice || 0), 0);
 
 
 
@@ -146,30 +164,54 @@ export const Dashboard = () => {
         />
       </div>
 
-      {/* ── Beds Quick Summary ── */}
-      <div className="glass-card rounded-2xl overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-slate-800">
+      {/* ── Beds Quick Summary (Current Month) ── */}
+      <div className="glass-card rounded-2xl overflow-hidden border border-slate-800">
+        <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/60 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-xl bg-violet-500/20 flex items-center justify-center">
               <Bed className="w-4 h-4 text-violet-400" />
             </div>
-            <h3 className="font-bold text-white text-sm">ملخص السراير</h3>
+            <div>
+              <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                <span>ملخص السراير للشهر الحالي</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  {selectedMonth}
+                </span>
+              </h3>
+            </div>
           </div>
-          <button 
-            onClick={() => setActiveTab('beds')}
-            className="flex items-center gap-1 text-[11px] text-blue-400 font-bold"
-          >
-            عرض الكل
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Quick Month Switcher */}
+            <select
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200 rounded-xl px-2.5 py-1.5 focus:outline-none cursor-pointer"
+            >
+              {availableMonthsList.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <button 
+              onClick={() => setActiveTab('beds')}
+              className="flex items-center gap-1 text-[11px] text-blue-400 font-bold hover:text-blue-300"
+            >
+              عرض التفاصيل
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
         <div className="grid grid-cols-2 divide-x divide-x-reverse divide-slate-800">
           <div className="p-4 space-y-1">
-            <p className="text-[11px] text-slate-400">الإيجار المحصّل / الشهر</p>
-            <p className="text-lg font-black text-emerald-400">{totalCollectedCurrentRent.toLocaleString()} <span className="text-xs text-slate-500 font-normal">ج.م</span></p>
+            <p className="text-[11px] text-slate-400">الإيجار المحصّل ({selectedMonth})</p>
+            <p className="text-lg font-black text-emerald-400">
+              {totalCollectedCurrentRent.toLocaleString()} <span className="text-xs text-slate-500 font-normal">ج.م</span>
+              {totalCollectedCurrentRent === 0 && (
+                <span className="block text-[10px] text-slate-500 font-normal mt-0.5">في انتظار بدء التحصيل</span>
+              )}
+            </p>
           </div>
           <div className="p-4 space-y-1">
-            <p className="text-[11px] text-slate-400">الإيجار الكلي (عند اكتمال)</p>
+            <p className="text-[11px] text-slate-400">الإيجار المطلوب الكلي</p>
             <p className="text-lg font-black text-white">{totalExpectedMonthlyRent.toLocaleString()} <span className="text-xs text-slate-500 font-normal">ج.م</span></p>
           </div>
           <div className="p-4 space-y-1">
@@ -184,6 +226,69 @@ export const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Previous Month Summary Card (تفاصيل الشهر اللي فات) ── */}
+      {hasPrevMonthData && (
+        <div className="glass-card rounded-2xl overflow-hidden border border-blue-900/40 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950/20">
+          <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/60 flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-black text-white text-sm">
+                    تفاصيل الشهر اللي فات ({prevMonthName})
+                  </h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                    مؤرشف ومحفوظ
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">سجل الإيجارات والتحصيلات المحققة في شهر {prevMonthName}</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setSelectedMonth(prevMonthName);
+                setActiveTab('beds');
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold transition-all active:scale-95"
+            >
+              <span>عرض كشف {prevMonthName} بالكامل</span>
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-800 p-1">
+            <div className="p-3.5 space-y-1">
+              <p className="text-[11px] text-slate-400">إجمالي المحصل في {prevMonthName}</p>
+              <p className="text-base sm:text-lg font-black text-emerald-400">
+                {prevTotalCollected.toLocaleString()} <span className="text-xs text-slate-500 font-normal">ج.م</span>
+              </p>
+            </div>
+            <div className="p-3.5 space-y-1">
+              <p className="text-[11px] text-slate-400">إيجار محصّل</p>
+              <p className="text-base sm:text-lg font-black text-white">
+                {prevRentCollected.toLocaleString()} <span className="text-xs text-slate-500 font-normal">ج.م</span>
+              </p>
+            </div>
+            <div className="p-3.5 space-y-1">
+              <p className="text-[11px] text-slate-400">تأمين محصّل</p>
+              <p className="text-base sm:text-lg font-black text-blue-400">
+                {prevDepositCollected.toLocaleString()} <span className="text-xs text-slate-500 font-normal">ج.م</span>
+              </p>
+            </div>
+            <div className="p-3.5 space-y-1">
+              <p className="text-[11px] text-slate-400">نسبة الإشغال</p>
+              <p className="text-base sm:text-lg font-black text-purple-400">
+                {prevOccupancyRate}% <span className="text-xs text-slate-500 font-normal">({prevOccupiedCount}/{prevBedsCount} سرير)</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* ── Partners Summary ── */}
       <div className="space-y-3">
