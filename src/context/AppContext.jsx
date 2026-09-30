@@ -663,6 +663,59 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // Action: Record Quick Payment for Security Deposit (سداد / إضافة تأمين)
+  const recordDepositPayment = (bedId, newDepositPaidTotal) => {
+    let updatedBedObj = null;
+    let addedAmount = 0;
+    setData(prev => {
+      const newBeds = prev.beds.map(b => {
+        if (b.id === bedId) {
+          const prevPaid = Number(b.depositPaid || 0);
+          const newPaid = Number(newDepositPaidTotal || 0);
+          addedAmount = Math.max(0, newPaid - prevPaid);
+          const req = Number(b.depositRequired || b.monthlyPrice || 0);
+          const newRem = Math.max(0, req - newPaid);
+          updatedBedObj = {
+            ...b,
+            depositPaid: newPaid,
+            depositRemaining: newRem
+          };
+          return updatedBedObj;
+        }
+        return b;
+      });
+      return { ...prev, beds: newBeds };
+    });
+
+    if (updatedBedObj) {
+      addLocalLog(
+        'سداد تأمين',
+        'السراير والمستأجرين',
+        `سداد تأمين سرير: ${updatedBedObj.roomName} سرير ${updatedBedObj.bedNumber} للمستأجر "${updatedBedObj.tenantName}" - إجمالي التأمين المدفوع: ${Number(newDepositPaidTotal).toLocaleString()} ج.م (المتبقي: ${updatedBedObj.depositRemaining} ج.م)`,
+        addedAmount || newDepositPaidTotal,
+        updatedBedObj.notes || ''
+      );
+    }
+
+    showToast('تم تسجيل سداد التأمين بنجاح وحفظه في شيت جوجل');
+
+    if (isSheetsConfigured() && updatedBedObj) {
+      setSyncStatus('saving');
+      updateBedInSheets({
+        ...updatedBedObj,
+        _customActionType: 'سداد تأمين',
+        _customDetails: `سداد تأمين سرير: ${updatedBedObj.roomName} سرير ${updatedBedObj.bedNumber} للمستأجر "${updatedBedObj.tenantName}" - إجمالي التأمين المدفوع: ${newDepositPaidTotal} ج.م (المتبقي: ${updatedBedObj.depositRemaining} ج.م)`,
+        _customAmount: addedAmount || newDepositPaidTotal
+      })
+        .then(() => setSyncStatus('synced'))
+        .catch(err => {
+          console.error(err);
+          setSyncStatus('error');
+        });
+    }
+  };
+
+
   // Action: Vacate Bed & Refund Security Deposit
   const vacateBedAndRefund = (bedId, notesReason) => {
     let updatedBedObj = null;
@@ -923,6 +976,7 @@ export const AppProvider = ({ children }) => {
         updateBed,
         addBed,
         recordRentPayment,
+        recordDepositPayment,
         vacateBedAndRefund,
         updateMonthlyBill,
         resetToInitialData,

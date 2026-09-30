@@ -3,6 +3,7 @@ import { useApp, availableMonthsList } from '../context/AppContext';
 import { BedModal } from './BedModal';
 import { VacateBedModal } from './VacateBedModal';
 import { QuickPayRentModal } from './QuickPayRentModal';
+import { QuickPayDepositModal } from './QuickPayDepositModal';
 import { 
   Bed, 
   Plus, 
@@ -11,7 +12,8 @@ import {
   UserMinus, 
   DollarSign, 
   CheckCircle2,
-  ChevronDown
+  ChevronDown,
+  ShieldCheck
 } from 'lucide-react';
 
 export const BedsManager = () => {
@@ -31,6 +33,7 @@ export const BedsManager = () => {
   const [isBedModalOpen, setIsBedModalOpen] = useState(false);
   const [isVacateModalOpen, setIsVacateModalOpen] = useState(false);
   const [isPayRentModalOpen, setIsPayRentModalOpen] = useState(false);
+  const [isPayDepositModalOpen, setIsPayDepositModalOpen] = useState(false);
   const [selectedBed, setSelectedBed] = useState(null);
 
   // Group beds by room
@@ -47,6 +50,7 @@ export const BedsManager = () => {
   const handleOpenEdit = (bed) => { setSelectedBed(bed); setIsBedModalOpen(true); };
   const handleOpenVacate = (bed) => { setSelectedBed(bed); setIsVacateModalOpen(true); };
   const handleOpenPayRent = (bed) => { setSelectedBed(bed); setIsPayRentModalOpen(true); };
+  const handleOpenPayDeposit = (bed) => { setSelectedBed(bed); setIsPayDepositModalOpen(true); };
 
   const currentMonthIdx = availableMonthsList.indexOf(selectedMonth);
   const nextMonthName = currentMonthIdx >= 0 && currentMonthIdx < availableMonthsList.length - 1 
@@ -179,23 +183,36 @@ export const BedsManager = () => {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex gap-1.5">
+                        <div className="flex gap-1.5 items-center">
                           <button
                             onClick={() => handleOpenPayRent(bed)}
-                            className="flex-1 text-center py-1.5 text-[11px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 rounded-lg transition-colors"
+                            className="flex-1 text-center py-1.5 px-1 text-[11px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 rounded-lg transition-colors truncate"
+                            title="تسديد إيجار"
                           >
                             تسديد إيجار
                           </button>
                           <button
+                            onClick={() => handleOpenPayDeposit(bed)}
+                            className={`flex-1 text-center py-1.5 px-1 text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 truncate ${
+                              Number(bed.depositRemaining || 0) > 0
+                                ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30'
+                                : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-300'
+                            }`}
+                            title={Number(bed.depositRemaining || 0) > 0 ? `متبقي تأمين: ${bed.depositRemaining} ج.م` : 'إضافة أو تعديل تأمين'}
+                          >
+                            <ShieldCheck className="w-3 h-3 shrink-0" />
+                            <span>{Number(bed.depositRemaining || 0) > 0 ? 'سداد تأمين' : 'تأمين'}</span>
+                          </button>
+                          <button
                             onClick={() => handleOpenVacate(bed)}
-                            className="py-1.5 px-2 text-[11px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 rounded-lg transition-colors"
+                            className="py-1.5 px-2 text-[11px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 rounded-lg transition-colors shrink-0"
                             title="إخلاء"
                           >
                             <UserMinus className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleOpenEdit(bed)}
-                            className="py-1.5 px-2 text-[11px] bg-slate-700/60 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors"
+                            className="py-1.5 px-2 text-[11px] bg-slate-700/60 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors shrink-0"
                             title="تعديل"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
@@ -222,6 +239,7 @@ export const BedsManager = () => {
       <BedModal isOpen={isBedModalOpen} onClose={() => setIsBedModalOpen(false)} bedToEdit={selectedBed} />
       <VacateBedModal isOpen={isVacateModalOpen} onClose={() => setIsVacateModalOpen(false)} bed={selectedBed} />
       <QuickPayRentModal isOpen={isPayRentModalOpen} onClose={() => setIsPayRentModalOpen(false)} bed={selectedBed} />
+      <QuickPayDepositModal isOpen={isPayDepositModalOpen} onClose={() => setIsPayDepositModalOpen(false)} bed={selectedBed} />
     </div>
   );
 };
