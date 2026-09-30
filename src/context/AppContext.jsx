@@ -154,6 +154,19 @@ export const AppProvider = ({ children }) => {
   const [financeSubTab, setFinanceSubTab] = useState('capital');
   const [selectedMonth, setSelectedMonth] = useState('سبتمبر 2026');
 
+  // الشهر الأخير الذي تم تفعيله/بدؤه في النظام (افتراضياً أكتوبر 2026)
+  const [latestStartedMonth, setLatestStartedMonth] = useState(() => {
+    const saved = localStorage.getItem('apartment_latest_started_month_v1');
+    if (saved && availableMonthsList.includes(saved)) {
+      return saved;
+    }
+    return 'أكتوبر 2026';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('apartment_latest_started_month_v1', latestStartedMonth);
+  }, [latestStartedMonth]);
+
   // اختيار وتغيير الشهر مع ضمان وجود سرايره بإيجار 0 إذا لم تكن موجودة
   const handleSetSelectedMonth = (targetMonth) => {
     setSelectedMonth(targetMonth);
@@ -435,6 +448,14 @@ export const AppProvider = ({ children }) => {
     }));
 
     setSelectedMonth(targetMonth);
+
+    // تحديث الشهر الأحدث المفعل في النظام
+    const targetIdx = availableMonthsList.indexOf(targetMonth);
+    const currentLatestIdx = availableMonthsList.indexOf(latestStartedMonth);
+    if (targetIdx > currentLatestIdx) {
+      setLatestStartedMonth(targetMonth);
+    }
+
     addLocalLog(
       'ترحيل شهر جديد',
       'السراير والمستأجرين',
@@ -902,6 +923,8 @@ export const AppProvider = ({ children }) => {
       init.beds = ensureAllMonthsBeds(init.beds);
       setData(init);
       setSelectedMonth('سبتمبر 2026');
+      setLatestStartedMonth('أكتوبر 2026');
+      localStorage.removeItem('apartment_latest_started_month_v1');
       localStorage.removeItem('apartment_management_data_v1');
       addLocalLog('إعادة ضبط', 'النظام', 'تمت إعادة ضبط بيانات السيستم إلى النسخة الأصلية', '-');
       showToast('تمت إعادة ضبط البيانات', 'info');
@@ -1011,6 +1034,8 @@ export const AppProvider = ({ children }) => {
         selectedMonth,
         setSelectedMonth: handleSetSelectedMonth,
         startNewMonth,
+        latestStartedMonth,
+        setLatestStartedMonth,
         toast,
         showToast,
         partnersList,

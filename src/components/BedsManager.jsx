@@ -22,6 +22,7 @@ export const BedsManager = () => {
     selectedMonth, 
     setSelectedMonth, 
     startNewMonth,
+    latestStartedMonth,
     totalBedsCount, 
     occupiedBedsCount, 
     occupancyRate,
@@ -53,12 +54,20 @@ export const BedsManager = () => {
   const handleOpenPayDeposit = (bed) => { setSelectedBed(bed); setIsPayDepositModalOpen(true); };
 
   const currentMonthIdx = availableMonthsList.indexOf(selectedMonth);
+  const latestStartedIdx = availableMonthsList.indexOf(latestStartedMonth);
+
+  // الزر يظهر فقط إذا كان المستخدم واقفاً على أحدث شهر مفعل حالياً (وليس الشهور السابقة)
+  const isLatestActiveMonth = currentMonthIdx === latestStartedIdx;
+  const isPastArchivedMonth = currentMonthIdx < latestStartedIdx;
   const nextMonthName = currentMonthIdx >= 0 && currentMonthIdx < availableMonthsList.length - 1 
     ? availableMonthsList[currentMonthIdx + 1] 
-    : 'الشهر القادم';
+    : null;
+
+  const canStartNextMonth = isLatestActiveMonth && Boolean(nextMonthName);
 
   const handleStartNextMonth = () => {
-    if (window.confirm(`هل تريد تفعيل إيجارات (${nextMonthName})؟\nسيتم ترحيل المستأجرين تلقائياً.`)) {
+    if (!nextMonthName) return;
+    if (window.confirm(`هل تريد تفعيل إيجارات (${nextMonthName})؟\nسيتم ترحيل المستأجرين تلقائياً وتصفير الإيجارات 0.`)) {
       startNewMonth(nextMonthName);
     }
   };
@@ -77,15 +86,23 @@ export const BedsManager = () => {
             <p className="text-[11px] text-slate-400">{occupiedBedsCount}/{totalBedsCount} مؤجرة · {occupancyRate}% إشغال</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleStartNextMonth}
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-md shadow-indigo-600/20 active:scale-95"
-          >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            بدء {nextMonthName}
-          </button>
-        </div>
+        {canStartNextMonth ? (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleStartNextMonth}
+              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-md shadow-indigo-600/20 active:scale-95"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              بدء {nextMonthName}
+            </button>
+          </div>
+        ) : (
+          isPastArchivedMonth && (
+            <div className="flex items-center gap-1.5 bg-slate-800/80 text-slate-400 text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-700/50">
+              <span>شهر مؤرشف سابق</span>
+            </div>
+          )
+        )}
       </div>
 
       {/* ── Month selector + quick stats strip ── */}
