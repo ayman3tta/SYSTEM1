@@ -19,7 +19,6 @@ export const Header = () => {
     totalExpenses, 
     remainingCapitalPool, 
     exportToExcel, 
-    resetToInitialData,
     toast,
     syncStatus,
     isSheetsConnected,
