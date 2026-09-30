@@ -3,7 +3,6 @@ import { useApp } from '../context/AppContext';
 import { getGoogleSheetLink } from '../services/googleSheetsService';
 import {
   Download,
-  RefreshCw,
   Printer,
   Building2,
   MoreVertical,
@@ -158,13 +157,7 @@ export const Header = () => {
               <Printer className="w-4 h-4" />
               طباعة
             </button>
-            <button
-              onClick={() => { resetToInitialData(); setMobileMenuOpen(false); }}
-              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-rose-500/10 text-rose-300 border border-rose-500/20 text-[11px] font-medium active:scale-95"
-            >
-              <RefreshCw className="w-4 h-4" />
-              إعادة ضبط
-            </button>
+
           </div>
         )}
       </div>
