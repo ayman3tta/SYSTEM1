@@ -2,18 +2,18 @@ export const APPS_SCRIPT_CODE = `/**
  * ===================================================================
  * كود جوجل شيت - سيستم متابعة مصاريف شقة الكوثر
  * (Google Apps Script Code - Code.gs)
- * مع تسجيل تلقائي لجميع التعديلات والإضافات والحذف في صفحة منفصلة:
- * "سجل التعديلات والعمليات" بالتاريخ والوقت والبيان
+ * مع ميزة الاسترجاع والتراجع التلقائي بنقرة واحدة (Undo / Restore):
+ * أي حذف أو تعديل يمكن إرجاعه بوضع علامة صح ✅ في خانة "استرجاع التعديل"
+ * أو من القائمة العلوية: "🏠 سيستم شقة الكوثر -> ↩️ استرجاع الحركة المحددة"
  * ===================================================================
  * 
- * طريقة التركيب أو التحديث في 3 دقائق:
+ * طريقة التركيب أو التحديث في دقيقتين:
  * 1. افتح شيت جوجل الخاص بك من المتصفح.
  * 2. من القائمة العلوية اضغط: Extensions (الإضافات) -> Apps Script
- * 3. امسح أي كود موجود في المحرر وضع هذا الكود بالكامل بدلاً منه.
+ * 3. امسح أي كود قديم في المحرر وضع هذا الكود بالكامل بدلاً منه.
  * 4. اضغط أيقونة الحفظ 💾 (أو Ctrl + S).
  * 5. اضغط على الزر الأزرق بالأعلى: Deploy -> Manage deployments (إدارة عمليات النشر).
  * 6. اضغط على أيقونة القلم ✏️ (تعديل) بجانب النسخة الحالية، واختر New version (نسخة جديدة) واضغط Deploy.
- *    (أو Deploy -> New deployment إذا كنت تنشر لأول مرة).
  * ===================================================================
  */
 
@@ -24,7 +24,7 @@ const SHEETS = {
   BEDS: 'تفاصيل السراير والمستأجرين',
   BILLS: 'الفواتير الشهرية',
   PARTNERS: 'الشركاء ورأس المال',
-  LOGS: 'سجل التعديلات والعمليات' // صفحة منفصلة لتسجيل التعديلات والإضافات والحذف
+  LOGS: 'سجل التعديلات والعمليات'
 };
 
 // ==========================================
@@ -61,32 +61,25 @@ function doGet(e) {
         monthlyBills: getMonthlyBillsData(ss),
         activityLogs: getActivityLogsData(ss)
       };
-
-      return jsonResponse({
-        success: true,
-        data: data
-      });
+      return jsonResponse({ success: true, data: data });
     }
 
-    return jsonResponse({ success: false, error: 'Unknown action: ' + action });
+    return jsonResponse({ success: false, error: 'Unknown GET action: ' + action });
   } catch (error) {
     return jsonResponse({ success: false, error: error.toString() });
   }
 }
 
 // ==========================================
-// 2. التعامل مع طلبات POST (إضافة / تعديل / حذف / مزامنة كاملة)
+// 2. التعامل مع طلبات POST (تعديل، إضافة، حذف، مزامنة)
 // ==========================================
 function doPost(e) {
   try {
-    if (!e || !e.postData || !e.postData.contents) {
-      return jsonResponse({ success: false, error: 'No POST data provided' });
-    }
-
-    const payload = JSON.parse(e.postData.contents);
-    const action = payload.action;
-    const item = payload.payload || {};
+    const requestData = JSON.parse(e.postData.contents);
+    const action = requestData.action;
+    const item = requestData.payload;
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+
     ensureAllSheetsExist(ss);
 
     // 1. مزامنة كل البيانات دفعة واحدة (Initial Push or Full Sync)
@@ -97,7 +90,6 @@ function doPost(e) {
       if (item.beds) saveBedsData(ss, item.beds);
       if (item.monthlyBills) saveMonthlyBillsData(ss, item.monthlyBills);
 
-      // تسجيل حركة المزامنة في سجل التعديلات
       logAudit(
         ss,
         'مزامنة شاملة',
@@ -106,7 +98,8 @@ function doPost(e) {
         '-',
         'مزامنة كل الجداول',
         item._clientDate,
-        item._clientTime
+        item._clientTime,
+        null
       );
 
       return jsonResponse({
@@ -125,7 +118,8 @@ function doPost(e) {
         item.amount || '-',
         item.notes || '',
         item.clientDate,
-        item.clientTime
+        item.clientTime,
+        null
       );
       return jsonResponse({ success: true, message: 'Activity logged' });
     }
@@ -141,6 +135,13 @@ function doPost(e) {
         item.notes || ''
       ]);
 
+      const restorePayload = {
+        type: 'DELETE_ROW',
+        sheetName: SHEETS.EXPENSES,
+        id: item.id,
+        description: 'حذف المصروف المضاف: ' + (item.item || '')
+      };
+
       logAudit(
         ss,
         'إضافة مصروف',
@@ -149,14 +150,18 @@ function doPost(e) {
         item.amount,
         item.notes || '',
         item._clientDate,
-        item._clientTime
+        item._clientTime,
+        restorePayload
       );
 
       return jsonResponse({ success: true, message: 'Expense added' });
     }
 
     if (action === 'updateExpense') {
-      updateRowById(ss.getSheetByName(SHEETS.EXPENSES), item.id, [
+      const expensesSheet = ss.getSheetByName(SHEETS.EXPENSES);
+      const oldRow = getRowValuesById(expensesSheet, item.id);
+
+      updateRowById(expensesSheet, item.id, [
         item.id,
         item.date || '',
         item.item || '',
@@ -164,6 +169,17 @@ function doPost(e) {
         item.paidBy || '',
         item.notes || ''
       ]);
+
+      let restorePayload = null;
+      if (oldRow) {
+        restorePayload = {
+          type: 'UPDATE_ROW',
+          sheetName: SHEETS.EXPENSES,
+          id: item.id,
+          rowValues: oldRow,
+          description: 'استرجاع بيانات المصروف السابقة: ' + (oldRow[2] || item.item || '')
+        };
+      }
 
       logAudit(
         ss,
@@ -173,24 +189,43 @@ function doPost(e) {
         item.amount,
         item.notes || '',
         item._clientDate,
-        item._clientTime
+        item._clientTime,
+        restorePayload
       );
 
       return jsonResponse({ success: true, message: 'Expense updated' });
     }
 
     if (action === 'deleteExpense') {
-      deleteRowById(ss.getSheetByName(SHEETS.EXPENSES), item.id);
+      const expensesSheet = ss.getSheetByName(SHEETS.EXPENSES);
+      const oldRow = getRowValuesById(expensesSheet, item.id) || [
+        item.id,
+        item.date || '',
+        item.item || '',
+        Number(item.amount || 0),
+        item.paidBy || '',
+        item.notes || ''
+      ];
+
+      deleteRowById(expensesSheet, item.id);
+
+      const restorePayload = {
+        type: 'RESTORE_ROW',
+        sheetName: SHEETS.EXPENSES,
+        rowValues: oldRow,
+        description: 'إعادة المصروف المحذوف: ' + (oldRow[2] || item.item || '') + ' بمبلغ ' + (oldRow[3] || item.amount || 0) + ' ج.م'
+      };
 
       logAudit(
         ss,
         'حذف مصروف',
         'المصروفات',
         'حذف المصروف #' + item.id + (item.item ? ' (' + item.item + ')' : ''),
-        item.amount || '-',
+        item.amount || (oldRow ? oldRow[3] : '-'),
         item.notes || '',
         item._clientDate,
-        item._clientTime
+        item._clientTime,
+        restorePayload
       );
 
       return jsonResponse({ success: true, message: 'Expense deleted' });
@@ -205,6 +240,13 @@ function doPost(e) {
         item.date || ''
       ]);
 
+      const restorePayload = {
+        type: 'DELETE_ROW',
+        sheetName: SHEETS.CAPITAL,
+        id: item.id,
+        description: 'حذف إيداع رأس المال المضاف للشريك: ' + (item.partner || '')
+      };
+
       logAudit(
         ss,
         'إضافة إيداع',
@@ -213,19 +255,34 @@ function doPost(e) {
         item.amount,
         item.date ? ('تاريخ الإيداع: ' + item.date) : '',
         item._clientDate,
-        item._clientTime
+        item._clientTime,
+        restorePayload
       );
 
       return jsonResponse({ success: true, message: 'Capital deposit added' });
     }
 
     if (action === 'updateCapitalDeposit') {
-      updateRowById(ss.getSheetByName(SHEETS.CAPITAL), item.id, [
+      const capSheet = ss.getSheetByName(SHEETS.CAPITAL);
+      const oldRow = getRowValuesById(capSheet, item.id);
+
+      updateRowById(capSheet, item.id, [
         item.id,
         item.partner || '',
         Number(item.amount || 0),
         item.date || ''
       ]);
+
+      let restorePayload = null;
+      if (oldRow) {
+        restorePayload = {
+          type: 'UPDATE_ROW',
+          sheetName: SHEETS.CAPITAL,
+          id: item.id,
+          rowValues: oldRow,
+          description: 'استرجاع إيداع رأس المال السابق للشريك: ' + (oldRow[1] || '')
+        };
+      }
 
       logAudit(
         ss,
@@ -235,24 +292,41 @@ function doPost(e) {
         item.amount,
         item.date ? ('تاريخ الإيداع: ' + item.date) : '',
         item._clientDate,
-        item._clientTime
+        item._clientTime,
+        restorePayload
       );
 
       return jsonResponse({ success: true, message: 'Capital deposit updated' });
     }
 
     if (action === 'deleteCapitalDeposit') {
-      deleteRowById(ss.getSheetByName(SHEETS.CAPITAL), item.id);
+      const capSheet = ss.getSheetByName(SHEETS.CAPITAL);
+      const oldRow = getRowValuesById(capSheet, item.id) || [
+        item.id,
+        item.partner || '',
+        Number(item.amount || 0),
+        item.date || ''
+      ];
+
+      deleteRowById(capSheet, item.id);
+
+      const restorePayload = {
+        type: 'RESTORE_ROW',
+        sheetName: SHEETS.CAPITAL,
+        rowValues: oldRow,
+        description: 'إعادة إيداع رأس المال المحذوف للشريك: ' + (oldRow[1] || item.partner || '')
+      };
 
       logAudit(
         ss,
         'حذف إيداع',
         'إيداعات رأس المال',
         'حذف إيداع رأس مال #' + item.id + (item.partner ? ' للشريك: ' + item.partner : ''),
-        item.amount || '-',
+        item.amount || (oldRow ? oldRow[2] : '-'),
         '',
         item._clientDate,
-        item._clientTime
+        item._clientTime,
+        restorePayload
       );
 
       return jsonResponse({ success: true, message: 'Capital deposit deleted' });
@@ -261,6 +335,8 @@ function doPost(e) {
     // 5. السراير والمستأجرين
     if (action === 'updateBed') {
       const sheet = ss.getSheetByName(SHEETS.BEDS);
+      const oldRow = getRowValuesById(sheet, item.id);
+
       const rowValues = [
         item.id,
         item.month || '',
@@ -283,6 +359,17 @@ function doPost(e) {
         appendRowToSheet(sheet, rowValues);
       }
 
+      let restorePayload = null;
+      if (oldRow) {
+        restorePayload = {
+          type: 'UPDATE_ROW',
+          sheetName: SHEETS.BEDS,
+          id: item.id,
+          rowValues: oldRow,
+          description: 'استرجاع بيانات ' + (oldRow[2] || '') + ' سرير ' + (oldRow[3] || '') + ' السابقة'
+        };
+      }
+
       const defaultBedDetails = 'تحديث بيانات ' + (item.roomName || '') + ' - سرير ' + (item.bedNumber || '') +
         ' (' + (item.month || '') + ') - المستأجر: ' + (item.tenantName || 'شاغر') +
         ' - الحالة: ' + (item.status || '') + ' - المدفوع: ' + (item.rentPaid || 0) + ' ج.م';
@@ -295,7 +382,8 @@ function doPost(e) {
         item._customAmount !== undefined ? item._customAmount : (item.rentPaid || item.monthlyPrice || '-'),
         item.notes || '',
         item._clientDate,
-        item._clientTime
+        item._clientTime,
+        restorePayload
       );
 
       return jsonResponse({ success: true, message: 'Bed updated' });
@@ -320,6 +408,13 @@ function doPost(e) {
         item.notes || ''
       ]);
 
+      const restorePayload = {
+        type: 'DELETE_ROW',
+        sheetName: SHEETS.BEDS,
+        id: item.id,
+        description: 'حذف السرير المضاف: ' + (item.roomName || '') + ' - سرير ' + (item.bedNumber || '')
+      };
+
       logAudit(
         ss,
         'إضافة سرير',
@@ -328,7 +423,8 @@ function doPost(e) {
         item.monthlyPrice,
         'المستأجر: ' + (item.tenantName || 'شاغر'),
         item._clientDate,
-        item._clientTime
+        item._clientTime,
+        restorePayload
       );
 
       return jsonResponse({ success: true, message: 'Bed added' });
@@ -346,7 +442,8 @@ function doPost(e) {
           '-',
           'ترحيل شهري تلقائي',
           item[0] && item[0]._clientDate,
-          item[0] && item[0]._clientTime
+          item[0] && item[0]._clientTime,
+          null
         );
       }
       return jsonResponse({ success: true, message: 'Beds batch updated' });
@@ -355,6 +452,8 @@ function doPost(e) {
     // 6. الفواتير الشهرية
     if (action === 'updateMonthlyBill') {
       const sheet = ss.getSheetByName(SHEETS.BILLS);
+      const oldRow = getRowValuesById(sheet, item.id);
+
       const rowValues = [
         item.id,
         item.month || '',
@@ -367,6 +466,17 @@ function doPost(e) {
       const updated = updateRowById(sheet, item.id, rowValues);
       if (!updated) {
         appendRowToSheet(sheet, rowValues);
+      }
+
+      let restorePayload = null;
+      if (oldRow) {
+        restorePayload = {
+          type: 'UPDATE_ROW',
+          sheetName: SHEETS.BILLS,
+          id: item.id,
+          rowValues: oldRow,
+          description: 'استرجاع فواتير شهر ' + (oldRow[1] || item.month || '') + ' السابقة'
+        };
       }
 
       const totalBills = Number(item.electricity || 0) + Number(item.water || 0) + Number(item.gas || 0) + Number(item.internet || 0);
@@ -383,7 +493,8 @@ function doPost(e) {
         totalBills,
         item.notes || '',
         item._clientDate,
-        item._clientTime
+        item._clientTime,
+        restorePayload
       );
 
       return jsonResponse({ success: true, message: 'Monthly bill updated' });
@@ -398,7 +509,7 @@ function doPost(e) {
 // ==========================================
 // 3. دالة كتابة الحركات في صفحة "سجل التعديلات والعمليات"
 // ==========================================
-function logAudit(ss, actionType, section, details, amount, notes, clientDate, clientTime) {
+function logAudit(ss, actionType, section, details, amount, notes, clientDate, clientTime, restorePayload) {
   try {
     const sheet = ss.getSheetByName(SHEETS.LOGS);
     if (!sheet) return;
@@ -406,7 +517,6 @@ function logAudit(ss, actionType, section, details, amount, notes, clientDate, c
     const now = new Date();
     const timeZone = Session.getScriptTimeZone() || 'Africa/Cairo';
 
-    // استخدام تاريخ ووقت العميل إن توفر، وإلا وقت الخادم
     const dateVal = clientDate || Utilities.formatDate(now, timeZone, 'yyyy-MM-dd');
     const timeVal = clientTime || Utilities.formatDate(now, timeZone, 'hh:mm:ss a');
 
@@ -423,6 +533,8 @@ function logAudit(ss, actionType, section, details, amount, notes, clientDate, c
       parsedAmount = isNaN(num) ? String(amount) : num;
     }
 
+    const payloadJson = restorePayload ? JSON.stringify(restorePayload) : '';
+
     const rowValues = [
       nextId,
       dateVal,
@@ -431,14 +543,15 @@ function logAudit(ss, actionType, section, details, amount, notes, clientDate, c
       section || '',
       details || '',
       parsedAmount,
-      notes || ''
+      notes || '',
+      restorePayload ? false : '—',
+      payloadJson
     ];
 
     sheet.appendRow(rowValues);
 
-    // تنسيق الصف المضاف
     const newRowNum = sheet.getLastRow();
-    const range = sheet.getRange(newRowNum, 1, 1, rowValues.length);
+    const range = sheet.getRange(newRowNum, 1, 1, 10);
     range.setFontFamily('Cairo');
     range.setFontSize(10);
     range.setVerticalAlignment('middle');
@@ -446,7 +559,7 @@ function logAudit(ss, actionType, section, details, amount, notes, clientDate, c
     // تلوين خفيف لخلفية الصف بناء على نوع الحركة
     if (actionType && actionType.indexOf('حذف') !== -1) {
       range.setBackground('#fff1f2'); // Rose light
-    } else if (actionType && actionType.indexOf('إضافة') !== -1) {
+    } else if (actionType && (actionType.indexOf('إضافة') !== -1 || actionType.indexOf('استرجاع') !== -1)) {
       range.setBackground('#f0fdf4'); // Emerald light
     } else if (actionType && (actionType.indexOf('تسديد') !== -1 || actionType.indexOf('إيداع') !== -1)) {
       range.setBackground('#ecfeff'); // Cyan light
@@ -458,13 +571,176 @@ function logAudit(ss, actionType, section, details, amount, notes, clientDate, c
     sheet.getRange(newRowNum, 7).setHorizontalAlignment('center');
     sheet.getRange(newRowNum, 8).setHorizontalAlignment('right');
 
+    // إعداد خانة الاسترجاع والتراجع (Column 9)
+    const undoCell = sheet.getRange(newRowNum, 9);
+    undoCell.setHorizontalAlignment('center');
+    if (restorePayload) {
+      try {
+        undoCell.setDataValidation(SpreadsheetApp.newDataValidation().requireCheckbox().build());
+        undoCell.setValue(false);
+        undoCell.setNote('ضع علامة صح ✅ هنا للتراجع عن هذه الحركة واسترجاع البيانات كما كانت قبل التعديل أو الحذف');
+      } catch (e) {}
+    }
+
   } catch (err) {
     console.error('Audit Log Error: ' + err.toString());
   }
 }
 
 // ==========================================
-// 4. دوال قراءة البيانات من الشيتات
+// 4. محرك الاسترجاع والتراجع الآلي (Undo & Restore Engine)
+// ==========================================
+
+/**
+ * دالة المشغل التلقائي عند قيام المستخدم بالتعديل في شيت جوجل
+ * بمجرد وضع علامة صح في العمود التاسع لصفحة السجل، تنفذ الاسترجاع فوراً
+ */
+function onEdit(e) {
+  try {
+    if (!e || !e.range) return;
+    const sheet = e.range.getSheet();
+    if (!sheet || sheet.getName() !== SHEETS.LOGS) return;
+
+    const col = e.range.getColumn();
+    const row = e.range.getRow();
+    if (row <= 1 || col !== 9) return; // العمود 9 هو "استرجاع التعديل"
+
+    const val = e.range.getValue();
+    if (val === true || String(val).toUpperCase() === 'TRUE') {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      executeRestoreAction(ss, sheet, row);
+    }
+  } catch (err) {
+    Logger.log('onEdit error: ' + err.toString());
+  }
+}
+
+/**
+ * القائمة العلوية المخصصة في شيت جوجل لتسهيل الاسترجاع اليدوي
+ */
+function onOpen() {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    ui.createMenu('🏠 سيستم شقة الكوثر')
+      .addItem('↩️ استرجاع الحركة المحددة (تراجع)', 'undoSelectedRowMenu')
+      .addSeparator()
+      .addItem('📊 تهيئة وتنسيق الجداول وتفعيل أزرار الاسترجاع', 'formatAllSheetsMenu')
+      .addToUi();
+  } catch (e) {}
+}
+
+function undoSelectedRowMenu() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getActiveSheet();
+  if (sheet.getName() !== SHEETS.LOGS) {
+    SpreadsheetApp.getUi().alert('يرجى أولاً الانتقال إلى صفحة "سجل التعديلات والعمليات" وتحديد الصف المراد استرجاعه.');
+    return;
+  }
+  const row = sheet.getActiveCell().getRow();
+  if (row <= 1) {
+    SpreadsheetApp.getUi().alert('يرجى تحديد صف يحتوي على حركة مسجلة (وليس صف العناوين).');
+    return;
+  }
+  executeRestoreAction(ss, sheet, row);
+}
+
+function formatAllSheetsMenu() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureAllSheetsExist(ss);
+  SpreadsheetApp.getActiveSpreadsheet().toast('تم تحديث وتنسيق الجداول وتفعيل أعمدة الاسترجاع بنجاح!', 'سيستم الشقة', 4);
+}
+
+/**
+ * تنفيذ عملية استرجاع البيانات لصف معين
+ */
+function executeRestoreAction(ss, sheetLogs, rowIdx) {
+  try {
+    const payloadCell = sheetLogs.getRange(rowIdx, 10);
+    const payloadRaw = payloadCell.getValue();
+    if (!payloadRaw) {
+      SpreadsheetApp.getActiveSpreadsheet().toast('⚠️ لا توجد بيانات استرجاع مسجلة لهذه الحركة أو تم استرجاعها مسبقاً.', 'تنبيه', 5);
+      return false;
+    }
+
+    let payload;
+    try {
+      payload = typeof payloadRaw === 'string' ? JSON.parse(payloadRaw) : payloadRaw;
+    } catch (err) {
+      SpreadsheetApp.getActiveSpreadsheet().toast('⚠️ تعذر قراءة بيانات الاسترجاع.', 'خطأ', 4);
+      return false;
+    }
+
+    const targetSheet = ss.getSheetByName(payload.sheetName);
+    if (!targetSheet) {
+      SpreadsheetApp.getActiveSpreadsheet().toast('⚠️ لم يتم العثور على الشيت: ' + payload.sheetName, 'خطأ', 4);
+      return false;
+    }
+
+    let success = false;
+    if (payload.type === 'RESTORE_ROW') {
+      // إعادة الصف المحذوف بالكامل
+      targetSheet.appendRow(payload.rowValues);
+      success = true;
+    } else if (payload.type === 'UPDATE_ROW') {
+      // إعادة القيم السابقة قبل التعديل
+      success = updateRowById(targetSheet, payload.id, payload.rowValues);
+      if (!success) {
+        // إذا كان الصف غير موجود، نقوم بإضافته
+        targetSheet.appendRow(payload.rowValues);
+        success = true;
+      }
+    } else if (payload.type === 'DELETE_ROW') {
+      // التراجع عن الإضافة بحذف الصف الذي أضيف
+      success = deleteRowById(targetSheet, payload.id);
+    }
+
+    if (success) {
+      // تحديث خانة الاسترجاع في شيت السجل
+      const actionCell = sheetLogs.getRange(rowIdx, 9);
+      actionCell.clearDataValidations();
+      actionCell.setValue('تم الاسترجاع ↩️');
+      actionCell.setBackground('#dcfce7'); // Light green
+      actionCell.setFontColor('#15803d'); // Dark green
+      actionCell.setFontWeight('bold');
+      actionCell.setNote('');
+
+      // مسح الـ payload حتى لا يتكرر الاسترجاع
+      payloadCell.setValue('');
+
+      const desc = payload.description || 'الحركة';
+
+      // تسجيل حركة الاسترجاع في السجل
+      const now = new Date();
+      const timeZone = Session.getScriptTimeZone() || 'Africa/Cairo';
+      const dateVal = Utilities.formatDate(now, timeZone, 'yyyy-MM-dd');
+      const timeVal = Utilities.formatDate(now, timeZone, 'hh:mm:ss a');
+
+      logAudit(
+        ss,
+        '↩️ استرجاع يدوي',
+        payload.sheetName,
+        'تم استرجاع: ' + desc + ' بنجاح عبر شيت جوجل',
+        '-',
+        'تم التراجع عن العملية بواسطة المستخدم',
+        dateVal,
+        timeVal,
+        null
+      );
+
+      SpreadsheetApp.getActiveSpreadsheet().toast('✅ ' + desc + ' - تم الاسترجاع بنجاح!', 'سيستم الشقة', 6);
+      return true;
+    }
+
+    return false;
+  } catch (e) {
+    Logger.log('Restore error: ' + e.toString());
+    SpreadsheetApp.getActiveSpreadsheet().toast('حدث خطأ أثناء الاسترجاع: ' + e.toString(), 'خطأ', 5);
+    return false;
+  }
+}
+
+// ==========================================
+// 5. دوال قراءة البيانات من الشيتات
 // ==========================================
 function getExpensesData(ss) {
   const sheet = ss.getSheetByName(SHEETS.EXPENSES);
@@ -548,7 +824,7 @@ function getMonthlyBillsData(ss) {
   const list = [];
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
-    if (!r[1] && !r[0]) continue;
+    if (!r[0] && !r[1]) continue;
     list.push({
       id: Number(r[0]) || i,
       month: String(r[1] || '').trim(),
@@ -605,7 +881,9 @@ function getActivityLogsData(ss) {
       section: String(r[4] || ''),
       details: String(r[5] || ''),
       amount: r[6],
-      notes: String(r[7] || '')
+      notes: String(r[7] || ''),
+      undoStatus: String(r[8] || ''),
+      canUndo: Boolean(r[9])
     });
     if (list.length >= 150) break;
   }
@@ -613,7 +891,7 @@ function getActivityLogsData(ss) {
 }
 
 // ==========================================
-// 5. دوال كتابة وحفظ البيانات في الشيتات
+// 6. دوال كتابة وحفظ البيانات في الشيتات
 // ==========================================
 function saveExpensesData(ss, expenses) {
   const sheet = ss.getSheetByName(SHEETS.EXPENSES);
@@ -719,7 +997,7 @@ function savePartnersData(ss, partners) {
 }
 
 // ==========================================
-// 6. دوال مساعدة لإنشاء وتنسيق الشيتات
+// 7. دوال مساعدة لإنشاء وتنسيق الشيتات
 // ==========================================
 function ensureAllSheetsExist(ss) {
   const configs = [
@@ -737,7 +1015,11 @@ function ensureAllSheetsExist(ss) {
     { name: SHEETS.PARTNERS, headers: ['الشريك', 'رأس المال المبدئي'] },
     {
       name: SHEETS.LOGS,
-      headers: ['م', 'التاريخ', 'الساعة والوقت', 'نوع العملية', 'القسم', 'تفاصيل الحركة والتعديل', 'المبلغ / القيمة (ج.م)', 'ملاحظات وبيان']
+      headers: [
+        'م', 'التاريخ', 'الساعة والوقت', 'نوع العملية', 'القسم',
+        'تفاصيل الحركة والتعديل', 'المبلغ / القيمة (ج.م)', 'ملاحظات وبيان',
+        'استرجاع التعديل ↩️', 'بيانات الاسترجاع'
+      ]
     }
   ];
 
@@ -748,20 +1030,32 @@ function ensureAllSheetsExist(ss) {
       sheet.setRightToLeft(true);
       sheet.getRange(1, 1, 1, cfg.headers.length).setValues([cfg.headers]);
       formatHeaderRow(sheet);
+    } else if (cfg.name === SHEETS.LOGS) {
+      // تحديث عناوين شيت السجل إن كانت بدون خانة الاسترجاع
+      try {
+        const lastCol = sheet.getLastColumn();
+        if (lastCol < 9) {
+          sheet.getRange(1, 1, 1, cfg.headers.length).setValues([cfg.headers]);
+          formatHeaderRow(sheet);
+        }
+      } catch (e) {}
+    }
 
-      // ضبط عرض أعمدة سجل التعديلات
-      if (cfg.name === SHEETS.LOGS) {
-        try {
-          sheet.setColumnWidth(1, 50);
-          sheet.setColumnWidth(2, 105);
-          sheet.setColumnWidth(3, 110);
-          sheet.setColumnWidth(4, 130);
-          sheet.setColumnWidth(5, 140);
-          sheet.setColumnWidth(6, 360);
-          sheet.setColumnWidth(7, 120);
-          sheet.setColumnWidth(8, 220);
-        } catch (e) {}
-      }
+    // ضبط عرض أعمدة سجل التعديلات
+    if (cfg.name === SHEETS.LOGS && sheet) {
+      try {
+        sheet.setColumnWidth(1, 50);
+        sheet.setColumnWidth(2, 105);
+        sheet.setColumnWidth(3, 110);
+        sheet.setColumnWidth(4, 130);
+        sheet.setColumnWidth(5, 140);
+        sheet.setColumnWidth(6, 360);
+        sheet.setColumnWidth(7, 120);
+        sheet.setColumnWidth(8, 220);
+        sheet.setColumnWidth(9, 140); // عمود استرجاع التعديل
+        sheet.setColumnWidth(10, 20); // عمود البيانات
+        sheet.hideColumns(10); // إخفاء عمود الـ JSON ليظل المظهر مرتباً
+      } catch (e) {}
     }
   });
 
@@ -789,6 +1083,17 @@ function formatHeaderRow(sheet) {
 
 function appendRowToSheet(sheet, values) {
   sheet.appendRow(values);
+}
+
+function getRowValuesById(sheet, id) {
+  if (!sheet) return null;
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(id)) {
+      return rows[i];
+    }
+  }
+  return null;
 }
 
 function updateRowById(sheet, id, values) {

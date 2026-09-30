@@ -539,6 +539,7 @@ export const AppProvider = ({ children }) => {
   };
 
   const updateExpense = (updatedExpense) => {
+    const oldExpense = data.expenses.find(e => e.id === updatedExpense.id);
     setData(prev => ({
       ...prev,
       expenses: prev.expenses.map(e => e.id === updatedExpense.id ? updatedExpense : e)
@@ -556,7 +557,7 @@ export const AppProvider = ({ children }) => {
 
     if (isSheetsConfigured()) {
       setSyncStatus('saving');
-      updateExpenseInSheets(updatedExpense)
+      updateExpenseInSheets({ ...updatedExpense, _previousState: oldExpense })
         .then(() => setSyncStatus('synced'))
         .catch(err => {
           console.error(err);
@@ -585,11 +586,11 @@ export const AppProvider = ({ children }) => {
         itemNotes
       );
 
-      showToast('تم حذف المصروف وتسجيل حركة الحذف في سجل جوجل شيت', 'info');
+      showToast('تم حذف المصروف وتسجيل حركة الحذف في سجل جوجل شيت (يمكن استرجاعه بنقرة واحدة من شيت جوجل)', 'info');
 
       if (isSheetsConfigured()) {
         setSyncStatus('saving');
-        deleteExpenseFromSheets({ id, item: itemName, amount: itemAmount, notes: itemNotes })
+        deleteExpenseFromSheets(target || { id, item: itemName, amount: itemAmount, notes: itemNotes })
           .then(() => setSyncStatus('synced'))
           .catch(err => {
             console.error(err);
@@ -630,6 +631,7 @@ export const AppProvider = ({ children }) => {
   };
 
   const updateCapitalDeposit = (updated) => {
+    const oldDeposit = data.capitalDeposits.find(d => d.id === updated.id);
     setData(prev => ({
       ...prev,
       capitalDeposits: prev.capitalDeposits.map(d => d.id === updated.id ? updated : d)
@@ -647,7 +649,7 @@ export const AppProvider = ({ children }) => {
 
     if (isSheetsConfigured()) {
       setSyncStatus('saving');
-      updateCapitalDepositInSheets(updated)
+      updateCapitalDepositInSheets({ ...updated, _previousState: oldDeposit })
         .then(() => setSyncStatus('synced'))
         .catch(err => {
           console.error(err);
@@ -676,11 +678,11 @@ export const AppProvider = ({ children }) => {
         depositDate
       );
 
-      showToast('تم حذف الإيداع وتسجيل الحركة في سجل جوجل شيت', 'info');
+      showToast('تم حذف الإيداع وتسجيل الحركة في سجل جوجل شيت (يمكن استرجاعه بنقرة واحدة من شيت جوجل)', 'info');
 
       if (isSheetsConfigured()) {
         setSyncStatus('saving');
-        deleteCapitalDepositFromSheets({ id, partner: partnerName, amount: depositAmount, date: depositDate })
+        deleteCapitalDepositFromSheets(target || { id, partner: partnerName, amount: depositAmount, date: depositDate })
           .then(() => setSyncStatus('synced'))
           .catch(err => {
             console.error(err);
@@ -692,6 +694,7 @@ export const AppProvider = ({ children }) => {
 
   // Actions for Beds & Tenants
   const updateBed = (updatedBed) => {
+    const oldBed = data.beds.find(b => b.id === updatedBed.id);
     const depositRem = Math.max(0, (Number(updatedBed.depositRequired) || 0) - (Number(updatedBed.depositPaid) || 0));
     const rentRem = Math.max(0, (Number(updatedBed.rentRequired) || 0) - (Number(updatedBed.rentPaid) || 0));
     
@@ -719,7 +722,7 @@ export const AppProvider = ({ children }) => {
 
     if (isSheetsConfigured()) {
       setSyncStatus('saving');
-      updateBedInSheets(finalBed)
+      updateBedInSheets({ ...finalBed, _previousState: oldBed })
         .then(() => setSyncStatus('synced'))
         .catch(err => {
           console.error(err);
@@ -921,6 +924,7 @@ export const AppProvider = ({ children }) => {
 
   // Actions for Utility Bills
   const updateMonthlyBill = (updatedBill) => {
+    const oldBill = data.monthlyBills.find(b => b.id === updatedBill.id);
     setData(prev => ({
       ...prev,
       monthlyBills: prev.monthlyBills.map(b => b.id === updatedBill.id ? updatedBill : b)
@@ -940,7 +944,7 @@ export const AppProvider = ({ children }) => {
 
     if (isSheetsConfigured()) {
       setSyncStatus('saving');
-      updateMonthlyBillInSheets(updatedBill)
+      updateMonthlyBillInSheets({ ...updatedBill, _previousState: oldBill })
         .then(() => setSyncStatus('synced'))
         .catch(err => {
           console.error(err);
