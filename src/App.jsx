@@ -11,9 +11,25 @@ import { GoogleSheetsModal } from './components/GoogleSheetsModal';
 
 const MainContent = () => {
   const { activeTab } = useApp();
+  const mainRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [activeTab]);
 
   return (
-    <main className="flex-1 overflow-y-auto">
+    <main key={activeTab} ref={mainRef} className="flex-1 overflow-y-auto">
       <div className="p-3 sm:p-5 md:p-6 max-w-5xl mx-auto w-full pb-28 md:pb-8">
         {activeTab === 'dashboard'  && <Dashboard />}
         {activeTab === 'beds'       && <BedsManager />}
