@@ -13,8 +13,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   Calendar,
-  Layers,
-  FileText
+  Layers
 } from 'lucide-react';
 
 const KpiCard = ({ label, value, unit = 'ج.م', icon: Icon, iconBg, iconColor, sub, onClick, accent }) => (
@@ -60,13 +59,11 @@ export const Dashboard = () => {
     totalCollectedDeposit,
     totalRemainingDeposit,
     totalCollectedCurrentRent,
-    totalRemainingCurrentRent,
     totalCollectedFromTenants,
     selectedMonth,
     setSelectedMonth,
     setActiveTab,
     setFinanceSubTab,
-    setMonthlyReportOpen,
     data
   } = useApp();
 
@@ -182,22 +179,12 @@ export const Dashboard = () => {
                 <span className="mr-2 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">الشهر الحالي</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setMonthlyReportOpen(true)}
-                className="flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 font-bold transition-colors bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20 active:scale-95"
-                title="عرض التقرير المالي الشهري"
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>التقرير</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('beds')}
-                className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white font-bold transition-colors"
-              >
-                إدارة <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            <button
+              onClick={() => setActiveTab('beds')}
+              className="flex items-center gap-1 text-[11px] text-indigo-400 font-bold hover:text-indigo-300 transition-colors"
+            >
+              إدارة <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
           </div>
 
           <div className="grid grid-cols-2 gap-2">

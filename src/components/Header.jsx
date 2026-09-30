@@ -10,8 +10,7 @@ import {
   TrendingUp,
   TrendingDown,
   FileSpreadsheet,
-  ExternalLink,
-  FileText
+  ExternalLink
 } from 'lucide-react';
 
 export const Header = () => {
@@ -23,8 +22,7 @@ export const Header = () => {
     toast,
     syncStatus,
     isSheetsConnected,
-    setSheetsModalOpen,
-    setMonthlyReportOpen
+    setSheetsModalOpen
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -101,14 +99,6 @@ export const Header = () => {
             {/* Desktop Action Buttons */}
             <div className="hidden sm:flex items-center gap-1.5">
               <button
-                onClick={() => setMonthlyReportOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold transition-all active:scale-95"
-                title="التقرير المالي والتشغيلي الشهري"
-              >
-                <FileText className="w-3.5 h-3.5 text-indigo-400" />
-                <span className="hidden xl:inline">التقرير الشهري</span>
-              </button>
-              <button
                 onClick={() => window.print()}
                 className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
                 title="طباعة"
@@ -139,13 +129,6 @@ export const Header = () => {
         {mobileMenuOpen && (
           <div className="sm:hidden mt-3 pt-3 border-t border-slate-800 grid grid-cols-4 gap-2 animate-slide-up">
             <button
-              onClick={() => { setMonthlyReportOpen(true); setMobileMenuOpen(false); }}
-              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-[11px] font-bold active:scale-95"
-            >
-              <FileText className="w-4 h-4 text-indigo-400" />
-              التقرير
-            </button>
-            <button
               onClick={() => { setSheetsModalOpen(true); setMobileMenuOpen(false); }}
               className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[11px] font-bold active:scale-95"
             >
@@ -166,6 +149,7 @@ export const Header = () => {
               <Printer className="w-4 h-4" />
               طباعة
             </button>
+
           </div>
         )}
       </div>
