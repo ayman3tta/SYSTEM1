@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { initialData } from '../data/initialData';
 import * as XLSX from 'xlsx';
 import {
@@ -39,6 +39,68 @@ export const availableMonthsList = [
   'أغسطس 2027'
 ];
 
+// التأكد من وجود سراير لجميع الشهور بحيث تبدأ الشهور بعد شهر 9 بإيجار 0
+export const ensureAllMonthsBeds = (beds) => {
+  if (!Array.isArray(beds) || beds.length === 0) return beds || [];
+
+  let resultBeds = beds.map(b => ({
+    ...b,
+    month: b.month || 'سبتمبر 2026'
+  }));
+
+  // السراير المرجعية الأساسية من شهر سبتمبر أو أول 8 سراير
+  const sepBeds = resultBeds.filter(b => b.month === 'سبتمبر 2026');
+  const baseBeds = sepBeds.length > 0 ? sepBeds : resultBeds.slice(0, 8);
+
+  let maxId = resultBeds.reduce((max, b) => Math.max(max, Number(b.id) || 0), 0);
+
+  // استخراج نموذج وحيد لكل سرير داخل كل غرفة
+  const templateBeds = [];
+  const seenTemplate = new Set();
+  baseBeds.forEach(b => {
+    const key = `${b.roomName}_${b.bedNumber}`;
+    if (!seenTemplate.has(key)) {
+      seenTemplate.add(key);
+      templateBeds.push(b);
+    }
+  });
+
+  availableMonthsList.forEach(m => {
+    if (m === 'سبتمبر 2026') return; // شهر سبتمبر يحتفظ ببياناته الأصلية
+
+    const existingForMonth = resultBeds.filter(b => b.month === m);
+    if (existingForMonth.length === 0) {
+      // الشهر غير موجود: ننشئ سرايره بإيجار صفر 0
+      templateBeds.forEach(b => {
+        maxId += 1;
+        const isOccupied = b.status === 'مؤجر';
+        const price = Number(b.monthlyPrice || 0);
+        const depReq = Number(b.depositRequired || price);
+        const depPaid = Number(b.depositPaid || 0);
+        resultBeds.push({
+          id: maxId,
+          month: m,
+          roomName: b.roomName,
+          bedNumber: b.bedNumber,
+          monthlyPrice: price,
+          status: b.status,
+          tenantName: isOccupied ? (b.tenantName || '') : '',
+          startDate: isOccupied ? (b.startDate || '') : '',
+          depositRequired: depReq,
+          depositPaid: isOccupied ? depPaid : 0,
+          depositRemaining: isOccupied ? Math.max(0, depReq - depPaid) : depReq,
+          rentRequired: isOccupied ? price : 0,
+          rentPaid: 0, // صفر لجميع الشهور بعد شهر 9
+          rentRemaining: isOccupied ? price : 0,
+          notes: isOccupied ? 'مستمر' : ''
+        });
+      });
+    }
+  });
+
+  return resultBeds;
+};
+
 export const AppProvider = ({ children }) => {
   // Load state from LocalStorage or initialData
   const [data, setData] = useState(() => {
@@ -47,7 +109,7 @@ export const AppProvider = ({ children }) => {
       try {
         const parsed = JSON.parse(saved);
         if (parsed.beds) {
-          parsed.beds = parsed.beds.map(b => ({ ...b, month: b.month || 'سبتمبر 2026' }));
+          parsed.beds = ensureAllMonthsBeds(parsed.beds);
         }
         if (parsed.monthlyBills) {
           parsed.monthlyBills = parsed.monthlyBills.map(b => ({
@@ -64,7 +126,7 @@ export const AppProvider = ({ children }) => {
       }
     }
     const init = { ...initialData };
-    init.beds = init.beds.map(b => ({ ...b, month: b.month || 'سبتمبر 2026' }));
+    init.beds = ensureAllMonthsBeds(init.beds);
     if (init.monthlyBills) {
       init.monthlyBills = init.monthlyBills.map(b => ({
         ...b,
@@ -91,6 +153,20 @@ export const AppProvider = ({ children }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [financeSubTab, setFinanceSubTab] = useState('capital');
   const [selectedMonth, setSelectedMonth] = useState('سبتمبر 2026');
+
+  // اختيار وتغيير الشهر مع ضمان وجود سرايره بإيجار 0 إذا لم تكن موجودة
+  const handleSetSelectedMonth = (targetMonth) => {
+    setSelectedMonth(targetMonth);
+    setData(prev => {
+      const exists = prev.beds.some(b => b.month === targetMonth);
+      if (exists) return prev;
+      return {
+        ...prev,
+        beds: ensureAllMonthsBeds(prev.beds)
+      };
+    });
+  };
+
   const [toast, setToast] = useState(null);
   const [syncStatus, setSyncStatus] = useState(isSheetsConfigured() ? 'loading' : 'unconfigured');
   const [sheetsModalOpen, setSheetsModalOpen] = useState(false);
@@ -139,10 +215,10 @@ export const AppProvider = ({ children }) => {
 
       if (remoteData && (remoteData.expenses || remoteData.beds || remoteData.capitalDeposits)) {
         // Ensure proper formats
-        const formattedBeds = (remoteData.beds || []).map(b => ({
+        const formattedBeds = ensureAllMonthsBeds((remoteData.beds || []).map(b => ({
           ...b,
           month: b.month || 'سبتمبر 2026'
-        }));
+        })));
 
         const formattedBills = (remoteData.monthlyBills || []).map(b => ({
           ...b,
@@ -282,9 +358,28 @@ export const AppProvider = ({ children }) => {
   // Beds calculations filtered by selected Month
   const bedsForSelectedMonth = data.beds.filter(b => (b.month || 'سبتمبر 2026') === selectedMonth);
 
-  const currentBedsList = bedsForSelectedMonth.length > 0 
-    ? bedsForSelectedMonth 
-    : data.beds.filter(b => b.month === 'سبتمبر 2026');
+  // لا نقوم إطلاقاً بإرجاع شهر سبتمبر إذا كان الشهر المختار شهراً آخر، بل نعيد سراير الشهر المحدد بإيجار 0
+  const currentBedsList = useMemo(() => {
+    if (bedsForSelectedMonth.length > 0) return bedsForSelectedMonth;
+
+    // حالة احتياطية: إذا لم تكن السراير مسجلة للشهر، ننشئها فوراً بإيجار صفر 0
+    const baseBeds = data.beds.filter(b => b.month === 'سبتمبر 2026');
+    return baseBeds.map((b, idx) => {
+      const isOccupied = b.status === 'مؤجر';
+      const price = Number(b.monthlyPrice || 0);
+      const depReq = Number(b.depositRequired || price);
+      const depPaid = Number(b.depositPaid || 0);
+      return {
+        ...b,
+        id: (Number(b.id) || idx + 1) + 9000,
+        month: selectedMonth,
+        rentRequired: isOccupied ? price : 0,
+        rentPaid: 0,
+        rentRemaining: isOccupied ? price : 0,
+        notes: isOccupied ? 'مستمر' : ''
+      };
+    });
+  }, [bedsForSelectedMonth, data.beds, selectedMonth]);
 
   const totalBedsCount = currentBedsList.length;
   const occupiedBedsCount = currentBedsList.filter(b => b.status === 'مؤجر').length;
@@ -303,38 +398,37 @@ export const AppProvider = ({ children }) => {
 
   // Start / Roll Over to a New Month
   const startNewMonth = async (targetMonth) => {
-    const existing = data.beds.filter(b => b.month === targetMonth);
-    if (existing.length > 0) {
-      setSelectedMonth(targetMonth);
-      showToast(`تم الانتقال لبيانات شهر ${targetMonth}`);
-      return;
-    }
-
     const sourceBeds = currentBedsList;
     const maxId = data.beds.length > 0 ? Math.max(...data.beds.map(b => b.id)) : 0;
 
+    // استبدال أو تحديث سراير الشهر الهدف بترحيل المستأجرين من الشهر الحالي وتصفير الإيجارات 0
+    const bedsWithoutTarget = data.beds.filter(b => b.month !== targetMonth);
+
     const newBeds = sourceBeds.map((b, idx) => {
       const isOccupied = b.status === 'مؤجر';
+      const price = Number(b.monthlyPrice || 0);
+      const depReq = Number(b.depositRequired || price);
+      const depPaid = Number(b.depositPaid || 0);
       return {
         id: maxId + idx + 1,
         month: targetMonth,
         roomName: b.roomName,
         bedNumber: b.bedNumber,
-        monthlyPrice: b.monthlyPrice,
+        monthlyPrice: price,
         status: b.status,
-        tenantName: isOccupied ? b.tenantName : '',
-        startDate: isOccupied ? b.startDate : '',
-        depositRequired: isOccupied ? b.depositRequired : b.monthlyPrice,
-        depositPaid: isOccupied ? b.depositPaid : 0,
-        depositRemaining: isOccupied ? b.depositRemaining : b.monthlyPrice,
-        rentRequired: isOccupied ? b.monthlyPrice : 0,
+        tenantName: isOccupied ? (b.tenantName || '') : '',
+        startDate: isOccupied ? (b.startDate || '') : '',
+        depositRequired: depReq,
+        depositPaid: isOccupied ? depPaid : 0,
+        depositRemaining: isOccupied ? Math.max(0, depReq - depPaid) : depReq,
+        rentRequired: isOccupied ? price : 0,
         rentPaid: 0,
-        rentRemaining: isOccupied ? b.monthlyPrice : 0,
+        rentRemaining: isOccupied ? price : 0,
         notes: isOccupied ? 'مستمر من الشهر السابق' : ''
       };
     });
 
-    const updatedBeds = [...data.beds, ...newBeds];
+    const updatedBeds = [...bedsWithoutTarget, ...newBeds];
     setData(prev => ({
       ...prev,
       beds: updatedBeds
@@ -344,10 +438,10 @@ export const AppProvider = ({ children }) => {
     addLocalLog(
       'ترحيل شهر جديد',
       'السراير والمستأجرين',
-      `بدء وترحيل شهر جديد: ${targetMonth} مع ترحيل المستأجرين النشطين (عدد ${newBeds.length} سرير)`,
+      `بدء وترحيل شهر جديد: ${targetMonth} مع ترحيل المستأجرين وتصفير الإيجارات 0`,
       '-'
     );
-    showToast(`تم تفعيل شهر ${targetMonth} وترحيل المستأجرين`);
+    showToast(`تم تفعيل شهر ${targetMonth} وتصفير الإيجارات 0`);
 
     if (isSheetsConfigured()) {
       setSyncStatus('saving');
@@ -805,7 +899,7 @@ export const AppProvider = ({ children }) => {
   const resetToInitialData = () => {
     if (window.confirm('هل أنت متأكد من إعادة ضبط البيانات إلى النسخة الأصلية؟')) {
       const init = { ...initialData };
-      init.beds = init.beds.map(b => ({ ...b, month: b.month || 'سبتمبر 2026' }));
+      init.beds = ensureAllMonthsBeds(init.beds);
       setData(init);
       setSelectedMonth('سبتمبر 2026');
       localStorage.removeItem('apartment_management_data_v1');
@@ -915,7 +1009,7 @@ export const AppProvider = ({ children }) => {
         financeSubTab,
         setFinanceSubTab,
         selectedMonth,
-        setSelectedMonth,
+        setSelectedMonth: handleSetSelectedMonth,
         startNewMonth,
         toast,
         showToast,
