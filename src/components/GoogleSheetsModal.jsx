@@ -18,11 +18,10 @@ import {
   X,
   RefreshCw,
   HelpCircle,
-  Save,
-  History
+  Save
 } from 'lucide-react';
 
-export const GoogleSheetsModal = ({ isOpen, onClose, onOpenActivityLog }) => {
+export const GoogleSheetsModal = ({ isOpen, onClose }) => {
   const {
     syncStatus,
     refreshFromGoogleSheets,
@@ -165,17 +164,6 @@ export const GoogleSheetsModal = ({ isOpen, onClose, onOpenActivityLog }) => {
             </div>
 
             <div className="flex items-center gap-2">
-              {onOpenActivityLog && (
-                <button
-                  type="button"
-                  onClick={onOpenActivityLog}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 text-xs font-bold transition-all"
-                >
-                  <History className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>سجل التعديلات ({(activityLogs || []).length})</span>
-                </button>
-              )}
-
               {sheetLink && (
                 <a
                   href={sheetLink}

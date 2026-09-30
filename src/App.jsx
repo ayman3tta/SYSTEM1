@@ -8,7 +8,6 @@ import { BedsManager } from './components/BedsManager';
 import { UtilityBillsManager } from './components/UtilityBillsManager';
 import { FinancePage } from './components/FinancePage';
 import { GoogleSheetsModal } from './components/GoogleSheetsModal';
-import { ActivityLogModal } from './components/ActivityLogModal';
 
 const MainContent = () => {
   const { activeTab } = useApp();
@@ -27,12 +26,7 @@ const MainContent = () => {
 };
 
 const AppShell = () => {
-  const { 
-    sheetsModalOpen, 
-    setSheetsModalOpen, 
-    activityModalOpen, 
-    setActivityModalOpen 
-  } = useApp();
+  const { sheetsModalOpen, setSheetsModalOpen } = useApp();
 
   return (
     <div
@@ -45,15 +39,10 @@ const AppShell = () => {
         <MainContent />
       </div>
 
-      {/* Global Modals rendered at the top level of DOM with highest z-index */}
+      {/* Global Modals */}
       <GoogleSheetsModal
         isOpen={sheetsModalOpen}
         onClose={() => setSheetsModalOpen(false)}
-        onOpenActivityLog={() => { setSheetsModalOpen(false); setActivityModalOpen(true); }}
-      />
-      <ActivityLogModal
-        isOpen={activityModalOpen}
-        onClose={() => setActivityModalOpen(false)}
       />
     </div>
   );

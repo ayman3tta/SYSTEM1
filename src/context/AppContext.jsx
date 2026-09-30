@@ -94,7 +94,6 @@ export const AppProvider = ({ children }) => {
   const [toast, setToast] = useState(null);
   const [syncStatus, setSyncStatus] = useState(isSheetsConfigured() ? 'loading' : 'unconfigured');
   const [sheetsModalOpen, setSheetsModalOpen] = useState(false);
-  const [activityModalOpen, setActivityModalOpen] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -879,8 +878,6 @@ export const AppProvider = ({ children }) => {
         // Modals Management (Root level)
         sheetsModalOpen,
         setSheetsModalOpen,
-        activityModalOpen,
-        setActivityModalOpen,
 
         // Activity Logs (سجل التعديلات والعمليات)
         activityLogs,

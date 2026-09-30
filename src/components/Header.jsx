@@ -11,8 +11,7 @@ import {
   TrendingUp,
   TrendingDown,
   FileSpreadsheet,
-  ExternalLink,
-  History
+  ExternalLink
 } from 'lucide-react';
 
 export const Header = () => {
@@ -25,9 +24,7 @@ export const Header = () => {
     toast,
     syncStatus,
     isSheetsConnected,
-    activityLogs,
-    setSheetsModalOpen,
-    setActivityModalOpen
+    setSheetsModalOpen
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -61,24 +58,8 @@ export const Header = () => {
             </div>
           </div>
 
-          {/* Right Side: Google Sheets + Activity Log + Balance + Actions */}
+          {/* Right Side: Google Sheets + Balance + Actions */}
           <div className="flex items-center gap-2 shrink-0">
-
-            {/* Activity Log Button (سجل التعديلات والعمليات) */}
-            <button
-              onClick={() => setActivityModalOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold transition-all active:scale-95"
-              title="سجل التعديلات والعمليات المباشر (Google Sheets Log)"
-            >
-              <History className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="hidden sm:inline">سجل التعديلات</span>
-              {(activityLogs || []).length > 0 && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-500/30 text-indigo-200 font-mono">
-                  {(activityLogs || []).length}
-                </span>
-              )}
-            </button>
-
             {/* Google Sheets Connection Modal Button */}
             <button
               onClick={() => setSheetsModalOpen(true)}
@@ -90,6 +71,7 @@ export const Header = () => {
               {syncStatus === 'saving' && <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />}
               {syncStatus === 'synced' && <span className="w-2 h-2 rounded-full bg-emerald-400" />}
             </button>
+
 
             {/* Quick Open Google Sheet in Browser (if link exists) */}
             {sheetLink && (
@@ -156,13 +138,6 @@ export const Header = () => {
         {mobileMenuOpen && (
           <div className="sm:hidden mt-3 pt-3 border-t border-slate-800 grid grid-cols-4 gap-2 animate-slide-up">
             <button
-              onClick={() => { setActivityModalOpen(true); setMobileMenuOpen(false); }}
-              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-[11px] font-bold active:scale-95"
-            >
-              <History className="w-4 h-4 text-indigo-400" />
-              سجل التعديلات
-            </button>
-            <button
               onClick={() => { setSheetsModalOpen(true); setMobileMenuOpen(false); }}
               className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[11px] font-bold active:scale-95"
             >
@@ -175,6 +150,13 @@ export const Header = () => {
             >
               <Download className="w-4 h-4" />
               نسخة Excel
+            </button>
+            <button
+              onClick={() => { window.print(); setMobileMenuOpen(false); }}
+              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 text-[11px] font-medium active:scale-95"
+            >
+              <Printer className="w-4 h-4" />
+              طباعة
             </button>
             <button
               onClick={() => { resetToInitialData(); setMobileMenuOpen(false); }}
