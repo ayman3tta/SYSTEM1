@@ -105,6 +105,17 @@ export const BedsManager = () => {
         )}
       </div>
 
+      {/* ── Read-only banner for archived months ── */}
+      {isPastArchivedMonth && (
+        <div className="flex items-center gap-2.5 bg-slate-800/60 border border-slate-700/60 rounded-xl px-3.5 py-2.5">
+          <span className="text-base">🔒</span>
+          <div>
+            <p className="text-xs font-bold text-slate-300">عرض للقراءة فقط</p>
+            <p className="text-[10px] text-slate-500">شهر {selectedMonth} مؤرشف – لا يمكن التعديل عليه</p>
+          </div>
+        </div>
+      )}
+
       {/* ── Month selector + quick stats strip ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
         {/* Month Picker */}
@@ -163,7 +174,9 @@ export const BedsManager = () => {
                   <div
                     key={bed.id}
                     className={`rounded-xl border p-3 transition-all ${
-                      isOccupied
+                      isPastArchivedMonth
+                        ? 'bg-slate-900/40 border-slate-800'
+                        : isOccupied
                         ? 'bg-slate-900/70 border-slate-700'
                         : 'bg-slate-900/30 border-dashed border-slate-700 opacity-70'
                     }`}
@@ -199,50 +212,59 @@ export const BedsManager = () => {
                           </span>
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex gap-1.5 items-center">
-                          <button
-                            onClick={() => handleOpenPayRent(bed)}
-                            className="flex-1 text-center py-1.5 px-1 text-[11px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 rounded-lg transition-colors truncate"
-                            title="تسديد إيجار"
-                          >
-                            تسديد إيجار
-                          </button>
-                          <button
-                            onClick={() => handleOpenPayDeposit(bed)}
-                            className={`flex-1 text-center py-1.5 px-1 text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 truncate ${
-                              Number(bed.depositRemaining || 0) > 0
-                                ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30'
-                                : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-300'
-                            }`}
-                            title={Number(bed.depositRemaining || 0) > 0 ? `متبقي تأمين: ${bed.depositRemaining} ج.م` : 'إضافة أو تعديل تأمين'}
-                          >
-                            <ShieldCheck className="w-3 h-3 shrink-0" />
-                            <span>{Number(bed.depositRemaining || 0) > 0 ? 'سداد تأمين' : 'تأمين'}</span>
-                          </button>
-                          <button
-                            onClick={() => handleOpenVacate(bed)}
-                            className="py-1.5 px-2 text-[11px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 rounded-lg transition-colors shrink-0"
-                            title="إخلاء"
-                          >
-                            <UserMinus className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleOpenEdit(bed)}
-                            className="py-1.5 px-2 text-[11px] bg-slate-700/60 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors shrink-0"
-                            title="تعديل"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        {/* Actions: hidden for archived months */}
+                        {isPastArchivedMonth ? (
+                          <div className="text-[10px] text-slate-600 text-center py-1">
+                            🔒 بيانات مؤرشفة
+                          </div>
+                        ) : (
+                          <div className="flex gap-1.5 items-center">
+                            <button
+                              onClick={() => handleOpenPayRent(bed)}
+                              className="flex-1 text-center py-1.5 px-1 text-[11px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 rounded-lg transition-colors truncate"
+                              title="تسديد إيجار"
+                            >
+                              تسديد إيجار
+                            </button>
+                            <button
+                              onClick={() => handleOpenPayDeposit(bed)}
+                              className={`flex-1 text-center py-1.5 px-1 text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 truncate ${
+                                Number(bed.depositRemaining || 0) > 0
+                                  ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30'
+                                  : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-300'
+                              }`}
+                              title={Number(bed.depositRemaining || 0) > 0 ? `متبقي تأمين: ${bed.depositRemaining} ج.م` : 'إضافة أو تعديل تأمين'}
+                            >
+                              <ShieldCheck className="w-3 h-3 shrink-0" />
+                              <span>{Number(bed.depositRemaining || 0) > 0 ? 'سداد تأمين' : 'تأمين'}</span>
+                            </button>
+                            <button
+                              onClick={() => handleOpenVacate(bed)}
+                              className="py-1.5 px-2 text-[11px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 rounded-lg transition-colors shrink-0"
+                              title="إخلاء"
+                            >
+                              <UserMinus className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleOpenEdit(bed)}
+                              className="py-1.5 px-2 text-[11px] bg-slate-700/60 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors shrink-0"
+                              title="تعديل"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </>
                     ) : (
-                      <button
-                        onClick={() => handleOpenEdit(bed)}
-                        className="w-full py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors mt-1"
-                      >
-                        تأجير لمستأجر
-                      </button>
+                      /* No add-tenant button for archived months */
+                      !isPastArchivedMonth && (
+                        <button
+                          onClick={() => handleOpenEdit(bed)}
+                          className="w-full py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors mt-1"
+                        >
+                          تأجير لمستأجر
+                        </button>
+                      )
                     )}
                   </div>
                 );
