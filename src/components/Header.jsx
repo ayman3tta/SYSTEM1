@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { GoogleSheetsModal } from './GoogleSheetsModal';
-import { ActivityLogModal } from './ActivityLogModal';
 import { getGoogleSheetLink } from '../services/googleSheetsService';
 import {
   Download,
@@ -27,12 +25,12 @@ export const Header = () => {
     toast,
     syncStatus,
     isSheetsConnected,
-    activityLogs
+    activityLogs,
+    setSheetsModalOpen,
+    setActivityModalOpen
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [sheetsModalOpen, setSheetsModalOpen] = useState(false);
-  const [activityModalOpen, setActivityModalOpen] = useState(false);
   const isDeficit = remainingCapitalPool < 0;
   const sheetLink = getGoogleSheetLink();
 
@@ -49,19 +47,6 @@ export const Header = () => {
           {toast.message}
         </div>
       )}
-
-      {/* Google Sheets Modal */}
-      <GoogleSheetsModal
-        isOpen={sheetsModalOpen}
-        onClose={() => setSheetsModalOpen(false)}
-        onOpenActivityLog={() => { setSheetsModalOpen(false); setActivityModalOpen(true); }}
-      />
-
-      {/* Activity Logs Modal (سجل التعديلات والعمليات) */}
-      <ActivityLogModal
-        isOpen={activityModalOpen}
-        onClose={() => setActivityModalOpen(false)}
-      />
 
       <div className="px-3 sm:px-4 py-3">
         <div className="flex items-center justify-between gap-2 sm:gap-3">

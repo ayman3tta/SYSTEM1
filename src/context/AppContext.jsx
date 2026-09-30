@@ -93,6 +93,8 @@ export const AppProvider = ({ children }) => {
   const [selectedMonth, setSelectedMonth] = useState('سبتمبر 2026');
   const [toast, setToast] = useState(null);
   const [syncStatus, setSyncStatus] = useState(isSheetsConfigured() ? 'loading' : 'unconfigured');
+  const [sheetsModalOpen, setSheetsModalOpen] = useState(false);
+  const [activityModalOpen, setActivityModalOpen] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -873,6 +875,12 @@ export const AppProvider = ({ children }) => {
         refreshFromGoogleSheets,
         syncAllToGoogleSheets,
         saveGoogleSheetsConfig,
+
+        // Modals Management (Root level)
+        sheetsModalOpen,
+        setSheetsModalOpen,
+        activityModalOpen,
+        setActivityModalOpen,
 
         // Activity Logs (سجل التعديلات والعمليات)
         activityLogs,

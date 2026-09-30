@@ -7,6 +7,8 @@ import { ExpensesManager } from './components/ExpensesManager';
 import { BedsManager } from './components/BedsManager';
 import { UtilityBillsManager } from './components/UtilityBillsManager';
 import { FinancePage } from './components/FinancePage';
+import { GoogleSheetsModal } from './components/GoogleSheetsModal';
+import { ActivityLogModal } from './components/ActivityLogModal';
 
 const MainContent = () => {
   const { activeTab } = useApp();
@@ -24,19 +26,43 @@ const MainContent = () => {
   );
 };
 
+const AppShell = () => {
+  const { 
+    sheetsModalOpen, 
+    setSheetsModalOpen, 
+    activityModalOpen, 
+    setActivityModalOpen 
+  } = useApp();
+
+  return (
+    <div
+      className="min-h-screen h-screen flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 font-cairo selection:bg-blue-600 selection:text-white relative"
+      dir="rtl"
+    >
+      <Header />
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar />
+        <MainContent />
+      </div>
+
+      {/* Global Modals rendered at the top level of DOM with highest z-index */}
+      <GoogleSheetsModal
+        isOpen={sheetsModalOpen}
+        onClose={() => setSheetsModalOpen(false)}
+        onOpenActivityLog={() => { setSheetsModalOpen(false); setActivityModalOpen(true); }}
+      />
+      <ActivityLogModal
+        isOpen={activityModalOpen}
+        onClose={() => setActivityModalOpen(false)}
+      />
+    </div>
+  );
+};
+
 export function App() {
   return (
     <AppProvider>
-      <div
-        className="min-h-screen h-screen flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 font-cairo selection:bg-blue-600 selection:text-white"
-        dir="rtl"
-      >
-        <Header />
-        <div className="flex-1 flex overflow-hidden">
-          <Sidebar />
-          <MainContent />
-        </div>
-      </div>
+      <AppShell />
     </AppProvider>
   );
 }
