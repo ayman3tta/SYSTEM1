@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useApp, availableMonthsList } from '../context/AppContext';
+import { useApp, availableMonthsList, getCurrentMonthName } from '../context/AppContext';
 import { BedModal } from './BedModal';
 import { VacateBedModal } from './VacateBedModal';
 import { QuickPayRentModal } from './QuickPayRentModal';
@@ -56,14 +56,25 @@ export const BedsManager = () => {
   const currentMonthIdx = availableMonthsList.indexOf(selectedMonth);
   const latestStartedIdx = availableMonthsList.indexOf(latestStartedMonth);
 
-  // الزر يظهر فقط إذا كان المستخدم واقفاً على أحدث شهر مفعل حالياً (وليس الشهور السابقة)
+  // الشهر الحالي الفعلي من التقويم (للتحقق قبل السماح ببدء الشهر الجديد)
+  const realCurrentMonth = getCurrentMonthName();
+  const realCurrentMonthIdx = availableMonthsList.indexOf(realCurrentMonth);
+
   const isLatestActiveMonth = currentMonthIdx === latestStartedIdx;
   const isPastArchivedMonth = currentMonthIdx < latestStartedIdx;
-  const nextMonthName = currentMonthIdx >= 0 && currentMonthIdx < availableMonthsList.length - 1 
-    ? availableMonthsList[currentMonthIdx + 1] 
+  const nextMonthName = currentMonthIdx >= 0 && currentMonthIdx < availableMonthsList.length - 1
+    ? availableMonthsList[currentMonthIdx + 1]
     : null;
 
-  const canStartNextMonth = isLatestActiveMonth && Boolean(nextMonthName);
+  // الزر مفعّل فقط لو وصلنا فعلاً للشهر التالي في التقويم الحقيقي
+  const canStartNextMonth = isLatestActiveMonth
+    && Boolean(nextMonthName)
+    && availableMonthsList.indexOf(nextMonthName) <= realCurrentMonthIdx;
+
+  // زرار موجود لكن مقفول (لسه ما وصلناش للشهر ده)
+  const showLockedNextMonth = isLatestActiveMonth
+    && Boolean(nextMonthName)
+    && availableMonthsList.indexOf(nextMonthName) > realCurrentMonthIdx;
 
   const handleStartNextMonth = () => {
     if (!nextMonthName) return;
@@ -95,6 +106,14 @@ export const BedsManager = () => {
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               بدء {nextMonthName}
             </button>
+          </div>
+        ) : showLockedNextMonth ? (
+          <div
+            className="flex items-center gap-1.5 bg-slate-800/80 text-slate-500 text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-700/50 cursor-not-allowed"
+            title={`يُفتح عند بداية ${nextMonthName}`}
+          >
+            <span>🔒</span>
+            <span>بدء {nextMonthName}</span>
           </div>
         ) : (
           isPastArchivedMonth && (
