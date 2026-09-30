@@ -164,130 +164,101 @@ export const Dashboard = () => {
         />
       </div>
 
-      {/* ── Beds Quick Summary (Current Month) ── */}
+      {/* ── Beds Quick Summary ── */}
       <div className="glass-card rounded-2xl overflow-hidden border border-slate-800">
-        <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/60 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl bg-violet-500/20 flex items-center justify-center">
-              <Bed className="w-4 h-4 text-violet-400" />
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                <span>ملخص السراير للشهر الحالي</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  {selectedMonth}
-                </span>
-              </h3>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Quick Month Switcher */}
-            <select
-              value={selectedMonth}
-              onChange={e => setSelectedMonth(e.target.value)}
-              className="bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200 rounded-xl px-2.5 py-1.5 focus:outline-none cursor-pointer"
-            >
-              {availableMonthsList.map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-            <button 
-              onClick={() => setActiveTab('beds')}
-              className="flex items-center gap-1 text-[11px] text-blue-400 font-bold hover:text-blue-300"
-            >
-              عرض التفاصيل
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 divide-x divide-x-reverse divide-slate-800">
-          <div className="p-4 space-y-1">
-            <p className="text-[11px] text-slate-400">الإيجار المحصّل ({selectedMonth})</p>
-            <p className="text-lg font-black text-emerald-400">
-              {totalCollectedCurrentRent.toLocaleString()} <span className="text-xs text-slate-500 font-normal">ج.م</span>
-              {totalCollectedCurrentRent === 0 && (
-                <span className="block text-[10px] text-slate-500 font-normal mt-0.5">في انتظار بدء التحصيل</span>
-              )}
-            </p>
-          </div>
-          <div className="p-4 space-y-1">
-            <p className="text-[11px] text-slate-400">الإيجار المطلوب الكلي</p>
-            <p className="text-lg font-black text-white">{totalExpectedMonthlyRent.toLocaleString()} <span className="text-xs text-slate-500 font-normal">ج.م</span></p>
-          </div>
-          <div className="p-4 space-y-1">
-            <p className="text-[11px] text-slate-400">التأمين المحصّل</p>
-            <p className="text-lg font-black text-blue-400">{totalCollectedDeposit.toLocaleString()} <span className="text-xs text-slate-500 font-normal">ج.م</span></p>
-          </div>
-          <div className="p-4 space-y-1">
-            <p className="text-[11px] text-slate-400">تأمين متبقي للتحصيل</p>
-            <p className={`text-lg font-black ${totalRemainingDeposit > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
-              {totalRemainingDeposit.toLocaleString()} <span className="text-xs text-slate-500 font-normal">ج.م</span>
-            </p>
-          </div>
-        </div>
-      </div>
 
-      {/* ── Previous Month Summary Card (تفاصيل الشهر اللي فات) ── */}
-      {hasPrevMonthData && (
-        <div className="glass-card rounded-2xl overflow-hidden border border-blue-900/40 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950/20">
-          <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/60 flex-wrap gap-2">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
-                <Calendar className="w-4 h-4" />
+        {/* Current Month */}
+        <div className="p-4 border-b border-slate-800">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-violet-500/20 flex items-center justify-center">
+                <Bed className="w-4 h-4 text-violet-400" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-black text-white text-sm">
-                    تفاصيل الشهر اللي فات ({prevMonthName})
-                  </h3>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">
-                    مؤرشف ومحفوظ
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400">سجل الإيجارات والتحصيلات المحققة في شهر {prevMonthName}</p>
+                <span className="text-sm font-bold text-white">إيجارات {selectedMonth}</span>
+                <span className="mr-2 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">الشهر الحالي</span>
               </div>
             </div>
-
             <button
-              onClick={() => {
-                setSelectedMonth(prevMonthName);
-                setActiveTab('beds');
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold transition-all active:scale-95"
+              onClick={() => setActiveTab('beds')}
+              className="flex items-center gap-1 text-[11px] text-indigo-400 font-bold hover:text-indigo-300 transition-colors"
             >
-              <span>عرض كشف {prevMonthName} بالكامل</span>
-              <ChevronLeft className="w-3.5 h-3.5" />
+              إدارة <ChevronLeft className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-800 p-1">
-            <div className="p-3.5 space-y-1">
-              <p className="text-[11px] text-slate-400">إجمالي المحصل في {prevMonthName}</p>
-              <p className="text-base sm:text-lg font-black text-emerald-400">
-                {prevTotalCollected.toLocaleString()} <span className="text-xs text-slate-500 font-normal">ج.م</span>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-slate-900/60 rounded-xl p-3">
+              <p className="text-[10px] text-slate-500 mb-1">إيجار محصّل</p>
+              <p className={`text-base font-black ${totalCollectedCurrentRent > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
+                {totalCollectedCurrentRent.toLocaleString()}
+                <span className="text-[10px] font-normal text-slate-500 mr-1">ج.م</span>
+              </p>
+              {totalCollectedCurrentRent === 0 && (
+                <p className="text-[9px] text-slate-600 mt-0.5">في انتظار التحصيل</p>
+              )}
+            </div>
+            <div className="bg-slate-900/60 rounded-xl p-3">
+              <p className="text-[10px] text-slate-500 mb-1">الإيجار المطلوب</p>
+              <p className="text-base font-black text-white">
+                {totalExpectedMonthlyRent.toLocaleString()}
+                <span className="text-[10px] font-normal text-slate-500 mr-1">ج.م</span>
               </p>
             </div>
-            <div className="p-3.5 space-y-1">
-              <p className="text-[11px] text-slate-400">إيجار محصّل</p>
-              <p className="text-base sm:text-lg font-black text-white">
-                {prevRentCollected.toLocaleString()} <span className="text-xs text-slate-500 font-normal">ج.م</span>
+            <div className="bg-slate-900/60 rounded-xl p-3">
+              <p className="text-[10px] text-slate-500 mb-1">تأمين محصّل</p>
+              <p className="text-base font-black text-blue-400">
+                {totalCollectedDeposit.toLocaleString()}
+                <span className="text-[10px] font-normal text-slate-500 mr-1">ج.م</span>
               </p>
             </div>
-            <div className="p-3.5 space-y-1">
-              <p className="text-[11px] text-slate-400">تأمين محصّل</p>
-              <p className="text-base sm:text-lg font-black text-blue-400">
-                {prevDepositCollected.toLocaleString()} <span className="text-xs text-slate-500 font-normal">ج.م</span>
-              </p>
-            </div>
-            <div className="p-3.5 space-y-1">
-              <p className="text-[11px] text-slate-400">نسبة الإشغال</p>
-              <p className="text-base sm:text-lg font-black text-purple-400">
-                {prevOccupancyRate}% <span className="text-xs text-slate-500 font-normal">({prevOccupiedCount}/{prevBedsCount} سرير)</span>
+            <div className="bg-slate-900/60 rounded-xl p-3">
+              <p className="text-[10px] text-slate-500 mb-1">تأمين متبقي</p>
+              <p className={`text-base font-black ${totalRemainingDeposit > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
+                {totalRemainingDeposit.toLocaleString()}
+                <span className="text-[10px] font-normal text-slate-500 mr-1">ج.م</span>
               </p>
             </div>
           </div>
         </div>
-      )}
+
+        {/* Previous Month — only if data exists */}
+        {hasPrevMonthData && (
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                <span className="text-xs font-semibold text-slate-400">{prevMonthName}</span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-500 border border-slate-700">مؤرشف</span>
+              </div>
+              <button
+                onClick={() => { setSelectedMonth(prevMonthName); setActiveTab('beds'); }}
+                className="text-[11px] text-slate-400 hover:text-slate-200 font-semibold flex items-center gap-0.5 transition-colors"
+              >
+                عرض <ChevronLeft className="w-3 h-3" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="text-center">
+                <p className="text-[9px] text-slate-500 mb-0.5">إجمالي محصّل</p>
+                <p className="text-sm font-black text-emerald-400">{prevTotalCollected.toLocaleString()}</p>
+                <p className="text-[9px] text-slate-600">ج.م</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[9px] text-slate-500 mb-0.5">إيجار</p>
+                <p className="text-sm font-black text-white">{prevRentCollected.toLocaleString()}</p>
+                <p className="text-[9px] text-slate-600">ج.م</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[9px] text-slate-500 mb-0.5">إشغال</p>
+                <p className="text-sm font-black text-purple-400">{prevOccupancyRate}%</p>
+                <p className="text-[9px] text-slate-600">{prevOccupiedCount}/{prevBedsCount} سرير</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
 
       {/* ── Partners Summary ── */}
