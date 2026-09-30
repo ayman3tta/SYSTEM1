@@ -13,7 +13,10 @@ import {
   CheckCircle2,
   ChevronLeft,
   Calendar,
-  Layers
+  Layers,
+  Activity,
+  FileText,
+  Clock
 } from 'lucide-react';
 
 const KpiCard = ({ label, value, unit = 'ج.م', icon: Icon, iconBg, iconColor, sub, onClick, accent }) => (
@@ -59,16 +62,32 @@ export const Dashboard = () => {
     totalCollectedDeposit,
     totalRemainingDeposit,
     totalCollectedCurrentRent,
+    totalRemainingCurrentRent,
     totalCollectedFromTenants,
     selectedMonth,
     setSelectedMonth,
     setActiveTab,
     setFinanceSubTab,
+    setMonthlyReportOpen,
     data
   } = useApp();
 
   const partnersStats = partnersList.map(name => getPartnerStats(name));
   const isDeficit = remainingCapitalPool < 0;
+
+  // Cash Flow & Collection Metrics for selectedMonth
+  const rentCollectionPercent = totalExpectedMonthlyRent > 0 
+    ? Math.round((totalCollectedCurrentRent / totalExpectedMonthlyRent) * 100) 
+    : 0;
+
+  const currentMonthBeds = data.beds.filter(b => b.month === selectedMonth);
+  const paidBedsCount = currentMonthBeds.filter(b => b.status === 'مؤجر' && (b.paymentStatus === 'مدفوع' || Number(b.rentPaid || 0) >= Number(b.monthlyPrice || 0))).length;
+  const pendingBedsCount = currentMonthBeds.filter(b => b.status === 'مؤجر' && Number(b.rentPaid || 0) < Number(b.monthlyPrice || 0)).length;
+  const vacantBedsCount = currentMonthBeds.filter(b => b.status !== 'مؤجر').length;
+
+  const currentMonthBill = data.monthlyBills.find(b => b.month === selectedMonth);
+  const partnerMonthBills = Number(currentMonthBill?.water || 0) + Number(currentMonthBill?.gas || 0);
+  const netMonthlyCashFlow = totalCollectedCurrentRent - partnerMonthBills;
 
   // Previous Month Calculations
   const currentMonthIdx = availableMonthsList.indexOf(selectedMonth);
@@ -162,6 +181,107 @@ export const Dashboard = () => {
           sub={`إشغال ${occupancyRate}% (${occupiedBedsCount}/${totalBedsCount})`}
           onClick={() => setActiveTab('beds')}
         />
+      </div>
+
+      {/* ── Cash Flow & Collection Forecast Indicator ── */}
+      <div className="glass-card rounded-2xl p-4 sm:p-5 border border-slate-800 space-y-4">
+        
+        {/* Header with Monthly Report CTA */}
+        <div className="flex items-center justify-between flex-wrap gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <Activity className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-white text-sm sm:text-base">مؤشر التدفق المالي والتحصيل</h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-semibold">{selectedMonth}</span>
+              </div>
+              <p className="text-[11px] text-slate-400">متابعة الفارق بين المستهدف والمحصل اللحظي</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setMonthlyReportOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/25 active:scale-95 transition-all mr-auto sm:mr-0"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>التقرير المالي الشهري</span>
+          </button>
+        </div>
+
+        {/* Progress Bar Container */}
+        <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-400">نسبة تحصيل الإيجارات للشهر</span>
+            <span className="font-black text-emerald-400 text-sm">{rentCollectionPercent}%</span>
+          </div>
+
+          {/* Glowing Animated Progress Bar */}
+          <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-blue-500 via-teal-400 to-emerald-400 transition-all duration-700 shadow-[0_0_12px_rgba(52,211,153,0.5)]"
+              style={{ width: `${Math.min(100, Math.max(0, rentCollectionPercent))}%` }}
+            />
+          </div>
+
+          <div className="flex justify-between items-center text-[10px] text-slate-500 pt-0.5">
+            <span>تم تحصيل: <strong className="text-emerald-400">{totalCollectedCurrentRent.toLocaleString()} ج.م</strong></span>
+            <span>المستهدف الكامل: <strong className="text-white">{totalExpectedMonthlyRent.toLocaleString()} ج.م</strong></span>
+          </div>
+        </div>
+
+        {/* 3 Metric Cards Grid */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="bg-slate-900/50 p-2.5 sm:p-3 rounded-xl border border-slate-800 text-center">
+            <span className="text-[10px] text-slate-400 font-semibold block mb-0.5">المستهدف الشهري</span>
+            <div className="text-sm sm:text-base font-black text-white">
+              {totalExpectedMonthlyRent.toLocaleString()}
+            </div>
+            <span className="text-[9px] text-slate-500">ج.م</span>
+          </div>
+
+          <div className="bg-slate-900/50 p-2.5 sm:p-3 rounded-xl border border-slate-800 text-center">
+            <span className="text-[10px] text-slate-400 font-semibold block mb-0.5">المحصل الفعلي</span>
+            <div className="text-sm sm:text-base font-black text-emerald-400">
+              {totalCollectedCurrentRent.toLocaleString()}
+            </div>
+            <span className="text-[9px] text-slate-500">ج.م كاش</span>
+          </div>
+
+          <div className="bg-slate-900/50 p-2.5 sm:p-3 rounded-xl border border-slate-800 text-center">
+            <span className="text-[10px] text-slate-400 font-semibold block mb-0.5">المتبقي بالخارج</span>
+            <div className={`text-sm sm:text-base font-black ${totalRemainingCurrentRent > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
+              {totalRemainingCurrentRent.toLocaleString()}
+            </div>
+            <span className="text-[9px] text-slate-500">معلق / متأخر</span>
+          </div>
+        </div>
+
+        {/* Operational Status Badges */}
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <CheckCircle2 className="w-3 h-3" />
+            {paidBedsCount} سرير مسدد
+          </span>
+          {pendingBedsCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <Clock className="w-3 h-3" />
+              {pendingBedsCount} سرير معلق
+            </span>
+          )}
+          {vacantBedsCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+              <Bed className="w-3 h-3" />
+              {vacantBedsCount} شاغر
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 mr-auto">
+            <TrendingUp className="w-3 h-3" />
+            صافي تدفق الشهر: {netMonthlyCashFlow.toLocaleString()} ج.م
+          </span>
+        </div>
+
       </div>
 
       {/* ── Beds Quick Summary ── */}
