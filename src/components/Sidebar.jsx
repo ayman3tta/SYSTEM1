@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 export const Sidebar = () => {
-  const { activeTab, setActiveTab, occupiedBedsCount, totalBedsCount } = useApp();
+  const { activeTab, setActiveTab, occupiedBedsCount, totalBedsCount, setSelectedMonth, latestStartedMonth } = useApp();
 
   /* ── Desktop nav items (6 → 5, capital+settlement merged) ── */
   const desktopItems = [
@@ -42,7 +42,10 @@ export const Sidebar = () => {
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                if (item.id !== 'beds') setSelectedMonth(latestStartedMonth);
+                setActiveTab(item.id);
+              }}
               className={`flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 ${
                 isActive
                   ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg ${item.glow}`
@@ -79,7 +82,10 @@ export const Sidebar = () => {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => {
+                    if (item.id !== 'beds') setSelectedMonth(latestStartedMonth);
+                    setActiveTab(item.id);
+                  }}
                   className="flex-1 flex flex-col items-center justify-center gap-0.5 py-0.5 rounded-xl transition-all duration-150 active:scale-90 select-none relative min-w-0"
                 >
                   {/* Pill indicator behind icon */}
