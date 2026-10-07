@@ -999,7 +999,10 @@ export const AppProvider = ({ children }) => {
       const netProfit = collectedRent - (newOwnerRent + newBldExp);
       const share = netProfit > 0 ? Math.round(netProfit / 3) : 0;
 
-      const receivedObj = updates.receivedPartners || current.receivedPartners || {};
+      const receivedObj = {
+        ...(current.receivedPartners || { 'محمد': false, 'ايمن': false, 'احمد': false }),
+        ...(updates.receivedPartners || {})
+      };
       const receivedCount = ['محمد', 'ايمن', 'احمد'].filter(p => Boolean(receivedObj[p])).length;
       const totalTaken = netProfit > 0 ? receivedCount * share : 0;
       const remainingPool = netProfit > 0 ? Math.max(0, netProfit - totalTaken) : netProfit;
@@ -1007,6 +1010,7 @@ export const AppProvider = ({ children }) => {
       updatedSettlement = {
         ...current,
         ...updates,
+        receivedPartners: receivedObj,
         month,
         collectedRent,
         netProfit,
@@ -1078,28 +1082,18 @@ export const AppProvider = ({ children }) => {
 
   // استلام الشريك لأرباحه
   const togglePartnerRentReceived = (month, partnerName, received, shareAmount = 0) => {
-    let currentRec = {};
-    setData(prev => {
-      const existing = prev.monthlyRentSettlements || {};
-      const current = existing[month] || {
-        ownerRent: 7000,
-        ownerRentPaid: false,
-        buildingExpenses: 0,
-        buildingExpensesPaid: false,
-        receivedPartners: { 'محمد': false, 'ايمن': false, 'احمد': false }
-      };
-      currentRec = {
-        ...(current.receivedPartners || {}),
-        [partnerName]: received
-      };
-      return prev;
-    });
+    const existing = data?.monthlyRentSettlements?.[month] || {};
+    const existingReceived = existing.receivedPartners || { 'محمد': false, 'ايمن': false, 'احمد': false };
+    const newReceived = {
+      ...existingReceived,
+      [partnerName]: received
+    };
 
     const actionDesc = received
       ? `استلام الشريك "${partnerName}" نصيبه من أرباح إيجار ${month} بقيمة ${Number(shareAmount || 0).toLocaleString()} ج.م`
       : `إلغاء استلام الشريك "${partnerName}" لنصيبه من أرباح إيجار ${month}`;
 
-    updateMonthlyRentSettlement(month, { receivedPartners: currentRec }, {
+    updateMonthlyRentSettlement(month, { receivedPartners: newReceived }, {
       type: received ? 'استلام أرباح إيجار' : 'إلغاء استلام أرباح',
       details: actionDesc,
       amount: received ? shareAmount : '-'
@@ -1107,6 +1101,8 @@ export const AppProvider = ({ children }) => {
 
     if (received) {
       showToast(`تم تسجيل استلام الشريك (${partnerName}) لنصيبه (${Number(shareAmount || 0).toLocaleString()} ج.م) وحفظه في الشيت`);
+    } else {
+      showToast(`تم إلغاء استلام الشريك (${partnerName}) لنصيبه`);
     }
   };
 
