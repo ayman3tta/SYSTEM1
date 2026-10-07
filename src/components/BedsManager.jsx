@@ -50,8 +50,26 @@ export const BedsManager = () => {
   const handleOpenAdd = () => { setSelectedBed(null); setIsBedModalOpen(true); };
   const handleOpenEdit = (bed) => { setSelectedBed(bed); setIsBedModalOpen(true); };
   const handleOpenVacate = (bed) => { setSelectedBed(bed); setIsVacateModalOpen(true); };
-  const handleOpenPayRent = (bed) => { setSelectedBed(bed); setIsPayRentModalOpen(true); };
-  const handleOpenPayDeposit = (bed) => { setSelectedBed(bed); setIsPayDepositModalOpen(true); };
+  const handleOpenPayRent = (bed) => { 
+    const rentReq = Number(bed?.rentRequired || bed?.monthlyPrice || 0);
+    const rentPaid = Number(bed?.rentPaid || 0);
+    const rentRem = bed?.rentRemaining !== null && bed?.rentRemaining !== undefined 
+      ? Number(bed.rentRemaining) 
+      : Math.max(0, rentReq - rentPaid);
+    if (bed?.status === 'مؤجر' && (rentRem <= 0 || (rentReq > 0 && rentPaid >= rentReq))) return;
+    setSelectedBed(bed); 
+    setIsPayRentModalOpen(true); 
+  };
+  const handleOpenPayDeposit = (bed) => { 
+    const depReq = Number(bed?.depositRequired ?? bed?.monthlyPrice ?? 0);
+    const depPaid = Number(bed?.depositPaid || 0);
+    const depRem = bed?.depositRemaining !== null && bed?.depositRemaining !== undefined 
+      ? Number(bed.depositRemaining) 
+      : Math.max(0, depReq - depPaid);
+    if (bed?.status === 'مؤجر' && (depRem <= 0 || (depReq > 0 && depPaid >= depReq))) return;
+    setSelectedBed(bed); 
+    setIsPayDepositModalOpen(true); 
+  };
 
   const currentMonthIdx = availableMonthsList.indexOf(selectedMonth);
   const latestStartedIdx = availableMonthsList.indexOf(latestStartedMonth);
@@ -187,7 +205,22 @@ export const BedsManager = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {bedsInRoom.map(bed => {
                 const isOccupied = bed.status === 'مؤجر';
-                const isRentPaid = isOccupied && Number(bed.rentRemaining || 0) === 0;
+                
+                // حسابات الإيجار
+                const rentReq = Number(bed.rentRequired || bed.monthlyPrice || 0);
+                const rentPaid = Number(bed.rentPaid || 0);
+                const rentRem = bed.rentRemaining !== null && bed.rentRemaining !== undefined 
+                  ? Number(bed.rentRemaining) 
+                  : Math.max(0, rentReq - rentPaid);
+                const isRentPaid = isOccupied && (rentRem <= 0 || (rentReq > 0 && rentPaid >= rentReq));
+
+                // حسابات التأمين
+                const depReq = Number(bed.depositRequired ?? bed.monthlyPrice ?? 0);
+                const depPaid = Number(bed.depositPaid || 0);
+                const depRem = bed.depositRemaining !== null && bed.depositRemaining !== undefined 
+                  ? Number(bed.depositRemaining) 
+                  : Math.max(0, depReq - depPaid);
+                const isDepositPaid = isOccupied && (depRem <= 0 || (depReq > 0 && depPaid >= depReq));
 
                 return (
                   <div
@@ -224,7 +257,7 @@ export const BedsManager = () => {
                         {/* Deposit + Rent mini badges */}
                         <div className="flex gap-1.5 mb-2.5 flex-wrap">
                           <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-lg">
-                            تأمين: <strong className="text-emerald-400">{bed.depositPaid}/{bed.depositRequired}</strong>
+                            تأمين: <strong className={isDepositPaid ? 'text-emerald-400' : 'text-amber-400'}>{bed.depositPaid}/{bed.depositRequired}</strong>
                           </span>
                           <span className={`text-[10px] bg-slate-800 px-2 py-0.5 rounded-lg ${isRentPaid ? 'text-emerald-400' : 'text-amber-400'}`}>
                             إيجار: {bed.rentPaid}/{bed.rentRequired || bed.monthlyPrice}
@@ -240,22 +273,28 @@ export const BedsManager = () => {
                           <div className="flex gap-1.5 items-center">
                             <button
                               onClick={() => handleOpenPayRent(bed)}
-                              className="flex-1 text-center py-1.5 px-1 text-[11px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 rounded-lg transition-colors truncate"
-                              title="تسديد إيجار"
+                              disabled={isRentPaid}
+                              className={`flex-1 text-center py-1.5 px-1 text-[11px] font-bold rounded-lg transition-all truncate ${
+                                isRentPaid
+                                  ? 'bg-slate-800/40 text-slate-500 border border-slate-700/30 cursor-not-allowed opacity-60'
+                                  : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 active:scale-95'
+                              }`}
+                              title={isRentPaid ? 'تم سداد الإيجار بالكامل (مغلق)' : 'تسديد إيجار'}
                             >
-                              تسديد إيجار
+                              {isRentPaid ? 'تم السداد ✓' : 'تسديد إيجار'}
                             </button>
                             <button
                               onClick={() => handleOpenPayDeposit(bed)}
-                              className={`flex-1 text-center py-1.5 px-1 text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 truncate ${
-                                Number(bed.depositRemaining || 0) > 0
-                                  ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30'
-                                  : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-300'
+                              disabled={isDepositPaid}
+                              className={`flex-1 text-center py-1.5 px-1 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 truncate ${
+                                isDepositPaid
+                                  ? 'bg-slate-800/40 text-slate-500 border border-slate-700/30 cursor-not-allowed opacity-60'
+                                  : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 active:scale-95'
                               }`}
-                              title={Number(bed.depositRemaining || 0) > 0 ? `متبقي تأمين: ${bed.depositRemaining} ج.م` : 'إضافة أو تعديل تأمين'}
+                              title={isDepositPaid ? 'تم سداد التأمين بالكامل (مغلق)' : `متبقي تأمين: ${depRem} ج.م`}
                             >
                               <ShieldCheck className="w-3 h-3 shrink-0" />
-                              <span>{Number(bed.depositRemaining || 0) > 0 ? 'سداد تأمين' : 'تأمين'}</span>
+                              <span>{isDepositPaid ? 'تأمين مسدد ✓' : 'سداد تأمين'}</span>
                             </button>
                             <button
                               onClick={() => handleOpenVacate(bed)}
