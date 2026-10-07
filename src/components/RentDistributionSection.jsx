@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Coins, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Coins, CheckCircle2, AlertCircle, CloudCheck } from 'lucide-react';
 
 export const RentDistributionSection = () => {
   const { 
@@ -9,12 +9,18 @@ export const RentDistributionSection = () => {
     partnersList, 
     data, 
     updateMonthlyRentSettlement, 
-    togglePartnerRentReceived 
+    toggleOwnerRentPaid,
+    toggleBuildingExpPaid,
+    togglePartnerRentReceived,
+    isSheetsConnected,
+    syncStatus
   } = useApp();
 
-  const monthSettlement = data.monthlyRentSettlements?.[selectedMonth] || {};
+  const monthSettlement = data?.monthlyRentSettlements?.[selectedMonth] || {};
   const ownerRent = monthSettlement.ownerRent !== undefined ? monthSettlement.ownerRent : 7000;
+  const isOwnerRentPaid = Boolean(monthSettlement.ownerRentPaid);
   const buildingExpenses = monthSettlement.buildingExpenses !== undefined ? monthSettlement.buildingExpenses : 0;
+  const isBuildingExpPaid = Boolean(monthSettlement.buildingExpensesPaid);
   const receivedPartners = monthSettlement.receivedPartners || {};
 
   const [ownerRentInput, setOwnerRentInput] = useState(String(ownerRent));
@@ -22,10 +28,10 @@ export const RentDistributionSection = () => {
 
   // Sync inputs when selectedMonth changes or data updates
   useEffect(() => {
-    const cur = data.monthlyRentSettlements?.[selectedMonth] || {};
+    const cur = data?.monthlyRentSettlements?.[selectedMonth] || {};
     setOwnerRentInput(cur.ownerRent !== undefined ? String(cur.ownerRent) : '7000');
     setBuildingExpInput(cur.buildingExpenses !== undefined ? String(cur.buildingExpenses) : '0');
-  }, [selectedMonth, data.monthlyRentSettlements]);
+  }, [selectedMonth, data?.monthlyRentSettlements]);
 
   const handleOwnerRentChange = (val) => {
     setOwnerRentInput(val);
@@ -50,7 +56,8 @@ export const RentDistributionSection = () => {
   const sharePerPartner = netProfit > 0 ? Math.round(netProfit / 3) : 0;
 
   // Subtraction when partner checkbox is checked
-  const receivedCount = partnersList.filter(p => Boolean(receivedPartners[p])).length;
+  const partnersListSafe = partnersList || ['محمد', 'ايمن', 'احمد'];
+  const receivedCount = partnersListSafe.filter(p => Boolean(receivedPartners[p])).length;
   const totalWithdrawn = netProfit > 0 ? receivedCount * sharePerPartner : 0;
   const remainingRentPool = netProfit > 0 ? Math.max(0, netProfit - totalWithdrawn) : netProfit;
 
@@ -65,63 +72,131 @@ export const RentDistributionSection = () => {
           </div>
           <div>
             <h3 className="font-bold text-white text-xs sm:text-sm">تصفية إيجار الشهر وتوزيع الأرباح</h3>
-            <p className="text-[10px] text-slate-400 font-medium">حساب صافي الإيجار وقسمته على الـ 3 شركاء</p>
+            <p className="text-[10px] text-slate-400 font-medium">خصم إيجار المالك ومصاريف العمارة وقسمة الصافي على الـ 3 شركاء</p>
           </div>
         </div>
-        <span className="text-[10px] bg-slate-800 text-indigo-300 border border-slate-700 px-2 py-0.5 rounded-lg font-bold">
-          {selectedMonth}
-        </span>
+        <div className="flex items-center gap-1.5">
+          {isSheetsConnected && (
+            <span className="text-[9px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 px-2 py-0.5 rounded-lg font-bold flex items-center gap-1">
+              <span className={`w-1.5 h-1.5 rounded-full ${syncStatus === 'saving' ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
+              شيت جوجل
+            </span>
+          )}
+          <span className="text-[10px] bg-slate-800 text-indigo-300 border border-slate-700 px-2 py-0.5 rounded-lg font-bold">
+            {selectedMonth}
+          </span>
+        </div>
       </div>
 
       {/* ── 4 Main Numbers / Inputs ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
         
         {/* 1. إيرادات السراير */}
-        <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/50">
-          <span className="text-[10px] text-slate-400 block mb-0.5 font-medium">إيرادات السراير (المحصلة)</span>
-          <div className="text-sm sm:text-base font-black text-emerald-400 font-mono">
-            {collectedRent.toLocaleString()} <span className="text-[10px] text-slate-500 font-normal">ج.م</span>
+        <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/50 flex flex-col justify-between">
+          <div>
+            <span className="text-[10px] text-slate-400 block mb-0.5 font-medium">إيرادات السراير (المحصلة)</span>
+            <div className="text-base sm:text-lg font-black text-emerald-400 font-mono mt-1">
+              {collectedRent.toLocaleString()} <span className="text-[10px] text-slate-500 font-normal">ج.م</span>
+            </div>
           </div>
+          <span className="text-[9px] text-slate-500 mt-2">إجمالي المحصّل من السراير هذا الشهر</span>
         </div>
 
-        {/* 2. إيجار المالك */}
-        <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/50">
-          <label className="text-[10px] text-slate-400 block mb-0.5 font-medium">إيجار المالك (خصم)</label>
-          <div className="flex items-center gap-1">
-            <input 
-              type="number"
-              value={ownerRentInput}
-              onChange={(e) => handleOwnerRentChange(e.target.value)}
-              placeholder="7000"
-              className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-2 py-1 text-white text-xs font-bold font-mono focus:outline-none focus:border-indigo-500"
-            />
-            <span className="text-[10px] text-slate-500 shrink-0">ج.م</span>
+        {/* 2. إيجار المالك مع زرار التسديد */}
+        <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/50 flex flex-col justify-between gap-2">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] text-slate-400 font-medium">إيجار المالك (خصم)</label>
+              {isOwnerRentPaid && (
+                <span className="text-[9px] bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded font-bold">مسدد ✓</span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <input 
+                type="number"
+                value={ownerRentInput}
+                onChange={(e) => handleOwnerRentChange(e.target.value)}
+                placeholder="7000"
+                className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-2 py-1 text-white text-xs font-bold font-mono focus:outline-none focus:border-indigo-500"
+              />
+              <span className="text-[10px] text-slate-500 shrink-0">ج.م</span>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => toggleOwnerRentPaid(selectedMonth, !isOwnerRentPaid, ownerRentNum)}
+            className={`w-full py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1 truncate ${
+              isOwnerRentPaid
+                ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 shadow-sm'
+                : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm active:scale-95'
+            }`}
+            title={isOwnerRentPaid ? 'تم تسديد إيجار المالك (انقر للإلغاء)' : 'تسديد إيجار المالك'}
+          >
+            {isOwnerRentPaid ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span>تم السداد للمالك ✓</span>
+              </>
+            ) : (
+              <span>تسديد إيجار المالك</span>
+            )}
+          </button>
         </div>
 
-        {/* 3. مصاريف العمارة */}
-        <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/50">
-          <label className="text-[10px] text-slate-400 block mb-0.5 font-medium">مصاريف العمارة (خصم)</label>
-          <div className="flex items-center gap-1">
-            <input 
-              type="number"
-              value={buildingExpInput}
-              onChange={(e) => handleBuildingExpChange(e.target.value)}
-              placeholder="0"
-              className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-2 py-1 text-white text-xs font-bold font-mono focus:outline-none focus:border-indigo-500"
-            />
-            <span className="text-[10px] text-slate-500 shrink-0">ج.م</span>
+        {/* 3. مصاريف العمارة مع زرار التسديد */}
+        <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/50 flex flex-col justify-between gap-2">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] text-slate-400 font-medium">مصاريف العمارة (خصم)</label>
+              {isBuildingExpPaid && (
+                <span className="text-[9px] bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded font-bold">مسدد ✓</span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <input 
+                type="number"
+                value={buildingExpInput}
+                onChange={(e) => handleBuildingExpChange(e.target.value)}
+                placeholder="0"
+                className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-2 py-1 text-white text-xs font-bold font-mono focus:outline-none focus:border-indigo-500"
+              />
+              <span className="text-[10px] text-slate-500 shrink-0">ج.م</span>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => toggleBuildingExpPaid(selectedMonth, !isBuildingExpPaid, buildingExpNum)}
+            className={`w-full py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1 truncate ${
+              isBuildingExpPaid
+                ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 shadow-sm'
+                : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm active:scale-95'
+            }`}
+            title={isBuildingExpPaid ? 'تم تسديد مصاريف العمارة (انقر للإلغاء)' : 'تسديد مصاريف العمارة'}
+          >
+            {isBuildingExpPaid ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span>تم السداد للعمارة ✓</span>
+              </>
+            ) : (
+              <span>تسديد مصاريف العمارة</span>
+            )}
+          </button>
         </div>
 
         {/* 4. صافي الإيرادات */}
-        <div className={`p-2.5 rounded-xl border ${
+        <div className={`p-2.5 rounded-xl border flex flex-col justify-between ${
           netProfit >= 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-rose-500/10 border-rose-500/30'
         }`}>
-          <span className="text-[10px] text-slate-400 block mb-0.5 font-medium">صافي الإيراد (بعد الخصم)</span>
-          <div className={`text-sm sm:text-base font-black font-mono ${netProfit >= 0 ? 'text-emerald-300' : 'text-rose-400'}`}>
-            {netProfit.toLocaleString()} <span className="text-[10px] text-slate-500 font-normal">ج.م</span>
+          <div>
+            <span className="text-[10px] text-slate-400 block mb-0.5 font-medium">صافي الإيراد (بعد الخصم)</span>
+            <div className={`text-base sm:text-lg font-black font-mono mt-1 ${netProfit >= 0 ? 'text-emerald-300' : 'text-rose-400'}`}>
+              {netProfit.toLocaleString()} <span className="text-[10px] text-slate-500 font-normal">ج.م</span>
+            </div>
           </div>
+          <span className={`text-[9px] font-bold mt-2 ${netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {netProfit >= 0 ? 'جاهز للتوزيع على الشركاء' : 'يوجد عجز في تغطية الخصومات'}
+          </span>
         </div>
 
       </div>
@@ -155,7 +230,7 @@ export const RentDistributionSection = () => {
 
         {/* 3 Partner Checkboxes */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {partnersList.map((partner) => {
+          {partnersListSafe.map((partner) => {
             const isReceived = Boolean(receivedPartners[partner]);
             const isDisabled = netProfit <= 0;
 

@@ -24,7 +24,8 @@ const SHEETS = {
   BEDS: 'تفاصيل السراير والمستأجرين',
   BILLS: 'الفواتير الشهرية',
   PARTNERS: 'الشركاء ورأس المال',
-  LOGS: 'سجل التعديلات والعمليات'
+  LOGS: 'سجل التعديلات والعمليات',
+  RENT_DISTRIBUTION: 'تصفية وتوزيع الإيجار'
 };
 
 // ==========================================
@@ -59,7 +60,8 @@ function doGet(e) {
         expenses: getExpensesData(ss),
         beds: getBedsData(ss),
         monthlyBills: getMonthlyBillsData(ss),
-        activityLogs: getActivityLogsData(ss)
+        activityLogs: getActivityLogsData(ss),
+        monthlyRentSettlements: getRentDistributionData(ss)
       };
       return jsonResponse({ success: true, data: data });
     }
@@ -89,6 +91,7 @@ function doPost(e) {
       if (item.expenses) saveExpensesData(ss, item.expenses);
       if (item.beds) saveBedsData(ss, item.beds);
       if (item.monthlyBills) saveMonthlyBillsData(ss, item.monthlyBills);
+      if (item.monthlyRentSettlements) saveAllRentSettlements(ss, item.monthlyRentSettlements);
 
       logAudit(
         ss,
@@ -498,6 +501,28 @@ function doPost(e) {
       );
 
       return jsonResponse({ success: true, message: 'Monthly bill updated' });
+    }
+
+    // 7. تصفية وتوزيع إيجار الشهر على الشركاء
+    if (action === 'updateRentSettlement') {
+      saveRentSettlementRow(ss, item);
+
+      const actionDetails = item._customDetails || ('تحديث تصفية إيجار شهر ' + (item.month || '') + ': إيرادات ' + (item.collectedRent || 0) + ' ج.م - صافي ' + (item.netProfit || 0) + ' ج.م');
+      const actionType = item._customActionType || 'تصفية إيجار';
+
+      logAudit(
+        ss,
+        actionType,
+        'تصفية وتوزيع الإيجار',
+        actionDetails,
+        item._customAmount !== undefined ? item._customAmount : (item.netProfit || '-'),
+        item.notes || '',
+        item._clientDate,
+        item._clientTime,
+        null
+      );
+
+      return jsonResponse({ success: true, message: 'Rent settlement updated' });
     }
 
     return jsonResponse({ success: false, error: 'Unknown action: ' + action });
@@ -996,6 +1021,124 @@ function savePartnersData(ss, partners) {
   formatHeaderRow(sheet);
 }
 
+function saveRentSettlementRow(ss, item) {
+  const sheet = ss.getSheetByName(SHEETS.RENT_DISTRIBUTION);
+  if (!sheet) return;
+  const month = item.month || '';
+  if (!month) return;
+
+  const rowValues = [
+    month,
+    Number(item.collectedRent || 0),
+    Number(item.ownerRent || 0),
+    item.ownerRentPaid ? 'تم السداد ✓' : 'لم يسدد',
+    Number(item.buildingExpenses || 0),
+    item.buildingExpensesPaid ? 'تم السداد ✓' : 'لم يسدد',
+    Number(item.netProfit || 0),
+    Number(item.sharePerPartner || 0),
+    (item.receivedPartners && item.receivedPartners['محمد']) ? 'تم الاستلام ✓' : 'لم يستلم',
+    (item.receivedPartners && item.receivedPartners['ايمن']) ? 'تم الاستلام ✓' : 'لم يستلم',
+    (item.receivedPartners && item.receivedPartners['احمد']) ? 'تم الاستلام ✓' : 'لم يستلم',
+    Number(item.remainingRentPool || 0),
+    (item._clientDate || '') + ' ' + (item._clientTime || '')
+  ];
+
+  const rows = sheet.getDataRange().getValues();
+  let foundRow = -1;
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]).trim() === String(month).trim()) {
+      foundRow = i + 1;
+      break;
+    }
+  }
+
+  if (foundRow > 0) {
+    sheet.getRange(foundRow, 1, 1, rowValues.length).setValues([rowValues]);
+  } else {
+    sheet.appendRow(rowValues);
+  }
+}
+
+function saveAllRentSettlements(ss, settlementsMap) {
+  const sheet = ss.getSheetByName(SHEETS.RENT_DISTRIBUTION);
+  if (!sheet) return;
+  sheet.clearContents();
+  const headers = [
+    'الشهر',
+    'إيرادات السراير (ج.م)',
+    'إيجار المالك (ج.م)',
+    'سداد إيجار المالك',
+    'مصاريف العمارة (ج.م)',
+    'سداد مصاريف العمارة',
+    'صافي الإيراد للتوزيع (ج.م)',
+    'نصيب كل شريك (ج.م)',
+    'محمد (استلام الأرباح)',
+    'ايمن (استلام الأرباح)',
+    'احمد (استلام الأرباح)',
+    'المتبقي في الإيرادات (ج.م)',
+    'آخر تحديث'
+  ];
+  const rows = [headers];
+  if (settlementsMap && typeof settlementsMap === 'object') {
+    Object.keys(settlementsMap).forEach(month => {
+      const s = settlementsMap[month] || {};
+      rows.push([
+        month,
+        Number(s.collectedRent || 0),
+        Number(s.ownerRent || 0),
+        s.ownerRentPaid ? 'تم السداد ✓' : 'لم يسدد',
+        Number(s.buildingExpenses || 0),
+        s.buildingExpensesPaid ? 'تم السداد ✓' : 'لم يسدد',
+        Number(s.netProfit || 0),
+        Number(s.sharePerPartner || 0),
+        (s.receivedPartners && s.receivedPartners['محمد']) ? 'تم الاستلام ✓' : 'لم يستلم',
+        (s.receivedPartners && s.receivedPartners['ايمن']) ? 'تم الاستلام ✓' : 'لم يستلم',
+        (s.receivedPartners && s.receivedPartners['احمد']) ? 'تم الاستلام ✓' : 'لم يستلم',
+        Number(s.remainingRentPool || 0),
+        s.lastUpdated || ''
+      ]);
+    });
+  }
+  if (rows.length > 1) {
+    sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
+  } else {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+  formatHeaderRow(sheet);
+}
+
+function getRentDistributionData(ss) {
+  const sheet = ss.getSheetByName(SHEETS.RENT_DISTRIBUTION);
+  if (!sheet) return {};
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return {};
+
+  const result = {};
+  for (let i = 1; i < rows.length; i++) {
+    const month = String(rows[i][0]).trim();
+    if (month) {
+      result[month] = {
+        month: month,
+        collectedRent: Number(rows[i][1] || 0),
+        ownerRent: Number(rows[i][2] || 0),
+        ownerRentPaid: String(rows[i][3]).includes('مسدد') || String(rows[i][3]).includes('✓'),
+        buildingExpenses: Number(rows[i][4] || 0),
+        buildingExpensesPaid: String(rows[i][5]).includes('مسدد') || String(rows[i][5]).includes('✓'),
+        netProfit: Number(rows[i][6] || 0),
+        sharePerPartner: Number(rows[i][7] || 0),
+        receivedPartners: {
+          'محمد': String(rows[i][8]).includes('الاستلام') || String(rows[i][8]).includes('✓'),
+          'ايمن': String(rows[i][9]).includes('الاستلام') || String(rows[i][9]).includes('✓'),
+          'احمد': String(rows[i][10]).includes('الاستلام') || String(rows[i][10]).includes('✓')
+        },
+        remainingRentPool: Number(rows[i][11] || 0),
+        lastUpdated: rows[i][12] || ''
+      };
+    }
+  }
+  return result;
+}
+
 // ==========================================
 // 7. دوال مساعدة لإنشاء وتنسيق الشيتات
 // ==========================================
@@ -1013,6 +1156,24 @@ function ensureAllSheetsExist(ss) {
     },
     { name: SHEETS.BILLS, headers: ['م', 'الشهر', 'كهرباء', 'مياه', 'غاز', 'نت', 'ملاحظات'] },
     { name: SHEETS.PARTNERS, headers: ['الشريك', 'رأس المال المبدئي'] },
+    {
+      name: SHEETS.RENT_DISTRIBUTION,
+      headers: [
+        'الشهر',
+        'إيرادات السراير (ج.م)',
+        'إيجار المالك (ج.م)',
+        'سداد إيجار المالك',
+        'مصاريف العمارة (ج.م)',
+        'سداد مصاريف العمارة',
+        'صافي الإيراد للتوزيع (ج.م)',
+        'نصيب كل شريك (ج.م)',
+        'محمد (استلام الأرباح)',
+        'ايمن (استلام الأرباح)',
+        'احمد (استلام الأرباح)',
+        'المتبقي في الإيرادات (ج.م)',
+        'آخر تحديث'
+      ]
+    },
     {
       name: SHEETS.LOGS,
       headers: [
@@ -1038,6 +1199,25 @@ function ensureAllSheetsExist(ss) {
           sheet.getRange(1, 1, 1, cfg.headers.length).setValues([cfg.headers]);
           formatHeaderRow(sheet);
         }
+      } catch (e) {}
+    }
+
+    // ضبط عرض أعمدة تصفية وتوزيع الإيجار
+    if (cfg.name === SHEETS.RENT_DISTRIBUTION && sheet) {
+      try {
+        sheet.setColumnWidth(1, 110);
+        sheet.setColumnWidth(2, 130);
+        sheet.setColumnWidth(3, 120);
+        sheet.setColumnWidth(4, 130);
+        sheet.setColumnWidth(5, 130);
+        sheet.setColumnWidth(6, 140);
+        sheet.setColumnWidth(7, 140);
+        sheet.setColumnWidth(8, 130);
+        sheet.setColumnWidth(9, 130);
+        sheet.setColumnWidth(10, 130);
+        sheet.setColumnWidth(11, 130);
+        sheet.setColumnWidth(12, 150);
+        sheet.setColumnWidth(13, 140);
       } catch (e) {}
     }
 

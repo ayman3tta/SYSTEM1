@@ -16,6 +16,7 @@ import {
   addBedToSheets,
   batchUpdateBedsInSheets,
   updateMonthlyBillInSheets,
+  updateRentSettlementInSheets,
   logActivityToSheets,
   getClientDateTime,
   setGoogleScriptUrl,
@@ -285,7 +286,8 @@ export const AppProvider = ({ children }) => {
           capitalDeposits: remoteData.capitalDeposits || [],
           expenses: remoteData.expenses || [],
           beds: formattedBeds.length > 0 ? formattedBeds : prev.beds,
-          monthlyBills: formattedBills.length > 0 ? formattedBills : prev.monthlyBills
+          monthlyBills: formattedBills.length > 0 ? formattedBills : prev.monthlyBills,
+          monthlyRentSettlements: remoteData.monthlyRentSettlements || prev.monthlyRentSettlements || {}
         }));
 
         // تحديث سجل التعديلات والعمليات من الشيت إن وجد
@@ -959,67 +961,152 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // دالة مساعدة لمزامنة صف تصفية الإيجار في شيت جوجل
+  const syncRentSettlementRowToSheets = (month, settlementData, actionType, details, amount) => {
+    if (!isSheetsConfigured()) return;
+    setSyncStatus('saving');
+    updateRentSettlementInSheets({
+      month,
+      ...settlementData,
+      _customActionType: actionType || 'تصفية إيجار',
+      _customDetails: details,
+      _customAmount: amount
+    })
+      .then(() => setSyncStatus('synced'))
+      .catch(err => {
+        console.error('Failed to sync rent settlement to sheets', err);
+        setSyncStatus('error');
+      });
+  };
+
   // تصفية وتوزيع إيجار الشهر على الشركاء
-  const updateMonthlyRentSettlement = (month, updates) => {
+  const updateMonthlyRentSettlement = (month, updates, customLog) => {
+    let updatedSettlement = null;
     setData(prev => {
       const existing = prev.monthlyRentSettlements || {};
       const current = existing[month] || {
         ownerRent: 7000,
+        ownerRentPaid: false,
         buildingExpenses: 0,
+        buildingExpensesPaid: false,
         receivedPartners: { 'محمد': false, 'ايمن': false, 'احمد': false }
       };
+
+      const monthBeds = (prev.beds || []).filter(b => b.month === month);
+      const collectedRent = monthBeds.reduce((acc, b) => acc + Number(b.rentPaid || 0), 0);
+      const newOwnerRent = updates.ownerRent !== undefined ? Number(updates.ownerRent || 0) : Number(current.ownerRent || 0);
+      const newBldExp = updates.buildingExpenses !== undefined ? Number(updates.buildingExpenses || 0) : Number(current.buildingExpenses || 0);
+      const netProfit = collectedRent - (newOwnerRent + newBldExp);
+      const share = netProfit > 0 ? Math.round(netProfit / 3) : 0;
+
+      const receivedObj = updates.receivedPartners || current.receivedPartners || {};
+      const receivedCount = ['محمد', 'ايمن', 'احمد'].filter(p => Boolean(receivedObj[p])).length;
+      const totalTaken = netProfit > 0 ? receivedCount * share : 0;
+      const remainingPool = netProfit > 0 ? Math.max(0, netProfit - totalTaken) : netProfit;
+
+      updatedSettlement = {
+        ...current,
+        ...updates,
+        month,
+        collectedRent,
+        netProfit,
+        sharePerPartner: share,
+        remainingRentPool: remainingPool
+      };
+
       return {
         ...prev,
         monthlyRentSettlements: {
           ...existing,
-          [month]: {
-            ...current,
-            ...updates
-          }
+          [month]: updatedSettlement
         }
       };
     });
+
+    if (customLog) {
+      addLocalLog(customLog.type || 'تصفية إيجار', 'تصفية وتوزيع الإيجار', customLog.details, customLog.amount || '-');
+    }
+
+    if (updatedSettlement && isSheetsConfigured()) {
+      syncRentSettlementRowToSheets(
+        month,
+        updatedSettlement,
+        customLog?.type,
+        customLog?.details,
+        customLog?.amount
+      );
+    }
   };
 
+  // تسديد / إلغاء تسديد إيجار المالك
+  const toggleOwnerRentPaid = (month, paid, amount) => {
+    const actionDesc = paid 
+      ? `تسديد إيجار المالك لشهر ${month} بمبلغ ${Number(amount || 0).toLocaleString()} ج.م` 
+      : `إلغاء تسديد إيجار المالك لشهر ${month}`;
+    
+    updateMonthlyRentSettlement(month, { ownerRentPaid: paid }, {
+      type: paid ? 'تسديد إيجار المالك' : 'إلغاء سداد إيجار المالك',
+      details: actionDesc,
+      amount: paid ? amount : '-'
+    });
+
+    if (paid) {
+      showToast(`تم تسديد إيجار المالك لشهر ${month} بنجاح وحفظه في الشيت`);
+    } else {
+      showToast(`تم إلغاء تسديد إيجار المالك لشهر ${month}`);
+    }
+  };
+
+  // تسديد / إلغاء تسديد مصاريف العمارة
+  const toggleBuildingExpPaid = (month, paid, amount) => {
+    const actionDesc = paid 
+      ? `تسديد مصاريف العمارة لشهر ${month} بمبلغ ${Number(amount || 0).toLocaleString()} ج.م` 
+      : `إلغاء تسديد مصاريف العمارة لشهر ${month}`;
+    
+    updateMonthlyRentSettlement(month, { buildingExpensesPaid: paid }, {
+      type: paid ? 'تسديد مصاريف العمارة' : 'إلغاء سداد مصاريف العمارة',
+      details: actionDesc,
+      amount: paid ? amount : '-'
+    });
+
+    if (paid) {
+      showToast(`تم تسديد مصاريف العمارة لشهر ${month} بنجاح وحفظه في الشيت`);
+    } else {
+      showToast(`تم إلغاء تسديد مصاريف العمارة لشهر ${month}`);
+    }
+  };
+
+  // استلام الشريك لأرباحه
   const togglePartnerRentReceived = (month, partnerName, received, shareAmount = 0) => {
+    let currentRec = {};
     setData(prev => {
       const existing = prev.monthlyRentSettlements || {};
       const current = existing[month] || {
         ownerRent: 7000,
+        ownerRentPaid: false,
         buildingExpenses: 0,
+        buildingExpensesPaid: false,
         receivedPartners: { 'محمد': false, 'ايمن': false, 'احمد': false }
       };
-      const newReceivedPartners = {
+      currentRec = {
         ...(current.receivedPartners || {}),
         [partnerName]: received
       };
-      return {
-        ...prev,
-        monthlyRentSettlements: {
-          ...existing,
-          [month]: {
-            ...current,
-            receivedPartners: newReceivedPartners
-          }
-        }
-      };
+      return prev;
+    });
+
+    const actionDesc = received
+      ? `استلام الشريك "${partnerName}" نصيبه من أرباح إيجار ${month} بقيمة ${Number(shareAmount || 0).toLocaleString()} ج.م`
+      : `إلغاء استلام الشريك "${partnerName}" لنصيبه من أرباح إيجار ${month}`;
+
+    updateMonthlyRentSettlement(month, { receivedPartners: currentRec }, {
+      type: received ? 'استلام أرباح إيجار' : 'إلغاء استلام أرباح',
+      details: actionDesc,
+      amount: received ? shareAmount : '-'
     });
 
     if (received) {
-      addLocalLog(
-        'استلام أرباح إيجار',
-        'توزيع الأرباح',
-        `استلم الشريك "${partnerName}" نصيبه من أرباح إيجار ${month} بقيمة ${Number(shareAmount || 0).toLocaleString()} ج.م`,
-        shareAmount || '-'
-      );
-      showToast(`تم تسجيل استلام الشريك (${partnerName}) لنصيبه (${Number(shareAmount || 0).toLocaleString()} ج.م)`);
-    } else {
-      addLocalLog(
-        'إلغاء استلام أرباح إيجار',
-        'توزيع الأرباح',
-        `تم إلغاء استلام الشريك "${partnerName}" لنصيبه من أرباح إيجار ${month}`,
-        '-'
-      );
+      showToast(`تم تسجيل استلام الشريك (${partnerName}) لنصيبه (${Number(shareAmount || 0).toLocaleString()} ج.م) وحفظه في الشيت`);
     }
   };
 
@@ -1128,8 +1215,32 @@ export const AppProvider = ({ children }) => {
     const wsLogs = XLSX.utils.json_to_sheet(wsLogsData);
     XLSX.utils.book_append_sheet(wb, wsLogs, 'سجل التعديلات والعمليات');
 
+    // Sheet 6: تصفية وتوزيع الإيجار
+    const settlementsMap = data.monthlyRentSettlements || {};
+    const wsRentDistData = Object.keys(settlementsMap).map(m => {
+      const s = settlementsMap[m] || {};
+      return {
+        'الشهر': m,
+        'إيرادات السراير (ج.م)': s.collectedRent || 0,
+        'إيجار المالك (ج.م)': s.ownerRent || 0,
+        'حالة سداد إيجار المالك': s.ownerRentPaid ? 'تم السداد ✓' : 'لم يسدد',
+        'مصاريف العمارة (ج.م)': s.buildingExpenses || 0,
+        'حالة سداد مصاريف العمارة': s.buildingExpensesPaid ? 'تم السداد ✓' : 'لم يسدد',
+        'صافي الإيراد للتوزيع (ج.م)': s.netProfit || 0,
+        'نصيب كل شريك (ج.م)': s.sharePerPartner || 0,
+        'محمد (استلام الأرباح)': (s.receivedPartners && s.receivedPartners['محمد']) ? 'تم الاستلام ✓' : 'لم يستلم',
+        'ايمن (استلام الأرباح)': (s.receivedPartners && s.receivedPartners['ايمن']) ? 'تم الاستلام ✓' : 'لم يستلم',
+        'احمد (استلام الأرباح)': (s.receivedPartners && s.receivedPartners['احمد']) ? 'تم الاستلام ✓' : 'لم يستلم',
+        'المتبقي في الإيرادات (ج.م)': s.remainingRentPool || 0
+      };
+    });
+    if (wsRentDistData.length > 0) {
+      const wsRent = XLSX.utils.json_to_sheet(wsRentDistData);
+      XLSX.utils.book_append_sheet(wb, wsRent, 'تصفية وتوزيع الإيجار');
+    }
+
     XLSX.writeFile(wb, `متابعة_مصاريف_الشقة_${new Date().toISOString().split('T')[0]}.xlsx`);
-    showToast('تم تصدير ملف الإكسيل مع سجل التعديلات بنجاح');
+    showToast('تم تصدير ملف الإكسيل مع سجل التعديلات وتصفية الإيجار بنجاح');
   };
 
   return (
@@ -1209,6 +1320,8 @@ export const AppProvider = ({ children }) => {
         vacateBedAndRefund,
         updateMonthlyBill,
         updateMonthlyRentSettlement,
+        toggleOwnerRentPaid,
+        toggleBuildingExpPaid,
         togglePartnerRentReceived,
         resetToInitialData,
         exportToExcel

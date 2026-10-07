@@ -230,3 +230,7 @@ export const batchUpdateBedsInSheets = (beds) => postToSheets('batchUpdateBeds',
 
 // الفواتير الشهرية
 export const updateMonthlyBillInSheets = (bill) => postToSheets('updateMonthlyBill', bill);
+
+// تصفية وتوزيع إيجار الشهر
+export const updateRentSettlementInSheets = (settlement) => postToSheets('updateRentSettlement', settlement);
+

@@ -283,14 +283,15 @@ export const GoogleSheetsModal = ({ isOpen, onClose }) => {
             {showInstructions && (
               <div className="mt-3 p-4 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-3 text-xs text-slate-300 leading-relaxed animate-slide-up">
                 <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-indigo-200 mb-2">
-                  <p className="font-bold mb-1">📌 الجداول الـ 6 المنشأة في شيت جوجل:</p>
+                  <p className="font-bold mb-1">📌 الجداول الـ 7 المنشأة في شيت جوجل:</p>
                   <ul className="list-disc list-inside space-y-0.5 text-[11px] text-indigo-300">
                     <li><strong>المصروفات</strong></li>
                     <li><strong>إيداعات رأس المال</strong></li>
                     <li><strong>تفاصيل السراير والمستأجرين</strong></li>
                     <li><strong>الفواتير الشهرية</strong></li>
                     <li><strong>الشركاء ورأس المال</strong></li>
-                    <li><strong className="text-emerald-300 underline">سجل التعديلات والعمليات:</strong> يسجل آلياً التاريخ، الوقت، نوع الحركة (إضافة/تعديل/حذف/تسديد/إخلاء)، وبيان ما تم تغييره.</li>
+                    <li><strong className="text-emerald-300">تصفية وتوزيع الإيجار:</strong> يسجل آلياً إيراد السراير، إيجار المالك وسداده، مصاريف العمارة وسدادها، وصافي الربح وحالة استلام كل شريك لنصيبه.</li>
+                    <li><strong className="text-emerald-300 underline">سجل التعديلات والعمليات:</strong> يسجل آلياً التاريخ، الوقت، نوع الحركة (إضافة/تعديل/حذف/تسديد/استلام)، وبيان ما تم تغييره.</li>
                   </ul>
                 </div>
 
