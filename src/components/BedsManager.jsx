@@ -4,6 +4,7 @@ import { BedModal } from './BedModal';
 import { VacateBedModal } from './VacateBedModal';
 import { QuickPayRentModal } from './QuickPayRentModal';
 import { QuickPayDepositModal } from './QuickPayDepositModal';
+import { RentDistributionSection } from './RentDistributionSection';
 import { 
   Bed, 
   Plus, 
@@ -184,6 +185,9 @@ export const BedsManager = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Rent Distribution Section (تصفية وتوزيع إيجار الشهر على الشركاء) ── */}
+      <RentDistributionSection />
 
       {/* ── Rooms ── */}
       <div className="space-y-4">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { CapitalModal } from './CapitalModal';
+import { RentDistributionSection } from './RentDistributionSection';
 import {
   Wallet,
   Scale,
@@ -260,6 +261,9 @@ const SettlementTab = () => {
           </span>
         </div>
       )}
+
+      {/* ── Rent Distribution Section (توزيع أرباح الإيجار) ── */}
+      <RentDistributionSection />
     </div>
   );
 };

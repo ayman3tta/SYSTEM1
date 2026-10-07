@@ -138,6 +138,9 @@ export const AppProvider = ({ children }) => {
             gas: Number(b.gas || 0)
           }));
         }
+        if (!parsed.monthlyRentSettlements) {
+          parsed.monthlyRentSettlements = {};
+        }
         return parsed;
       } catch (e) {
         console.error('Failed to parse local storage data', e);
@@ -145,6 +148,9 @@ export const AppProvider = ({ children }) => {
     }
     const init = { ...initialData };
     init.beds = ensureAllMonthsBeds(init.beds);
+    if (!init.monthlyRentSettlements) {
+      init.monthlyRentSettlements = {};
+    }
     if (init.monthlyBills) {
       init.monthlyBills = init.monthlyBills.map(b => ({
         ...b,
@@ -953,11 +959,76 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // تصفية وتوزيع إيجار الشهر على الشركاء
+  const updateMonthlyRentSettlement = (month, updates) => {
+    setData(prev => {
+      const existing = prev.monthlyRentSettlements || {};
+      const current = existing[month] || {
+        ownerRent: 7000,
+        buildingExpenses: 0,
+        receivedPartners: { 'محمد': false, 'ايمن': false, 'احمد': false }
+      };
+      return {
+        ...prev,
+        monthlyRentSettlements: {
+          ...existing,
+          [month]: {
+            ...current,
+            ...updates
+          }
+        }
+      };
+    });
+  };
+
+  const togglePartnerRentReceived = (month, partnerName, received, shareAmount = 0) => {
+    setData(prev => {
+      const existing = prev.monthlyRentSettlements || {};
+      const current = existing[month] || {
+        ownerRent: 7000,
+        buildingExpenses: 0,
+        receivedPartners: { 'محمد': false, 'ايمن': false, 'احمد': false }
+      };
+      const newReceivedPartners = {
+        ...(current.receivedPartners || {}),
+        [partnerName]: received
+      };
+      return {
+        ...prev,
+        monthlyRentSettlements: {
+          ...existing,
+          [month]: {
+            ...current,
+            receivedPartners: newReceivedPartners
+          }
+        }
+      };
+    });
+
+    if (received) {
+      addLocalLog(
+        'استلام أرباح إيجار',
+        'توزيع الأرباح',
+        `استلم الشريك "${partnerName}" نصيبه من أرباح إيجار ${month} بقيمة ${Number(shareAmount || 0).toLocaleString()} ج.م`,
+        shareAmount || '-'
+      );
+      showToast(`تم تسجيل استلام الشريك (${partnerName}) لنصيبه (${Number(shareAmount || 0).toLocaleString()} ج.م)`);
+    } else {
+      addLocalLog(
+        'إلغاء استلام أرباح إيجار',
+        'توزيع الأرباح',
+        `تم إلغاء استلام الشريك "${partnerName}" لنصيبه من أرباح إيجار ${month}`,
+        '-'
+      );
+    }
+  };
+
   // Reset to Initial Excel Data
   const resetToInitialData = () => {
     if (window.confirm('هل أنت متأكد من إعادة ضبط البيانات إلى النسخة الأصلية؟')) {
       const init = { ...initialData };
       init.beds = ensureAllMonthsBeds(init.beds);
+      init.monthlyRentSettlements = {};
       setData(init);
       const currentActual = getCurrentMonthName();
       setSelectedMonth(currentActual);
@@ -1137,6 +1208,8 @@ export const AppProvider = ({ children }) => {
         recordDepositPayment,
         vacateBedAndRefund,
         updateMonthlyBill,
+        updateMonthlyRentSettlement,
+        togglePartnerRentReceived,
         resetToInitialData,
         exportToExcel
       }}

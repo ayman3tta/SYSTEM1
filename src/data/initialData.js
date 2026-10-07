@@ -1004,5 +1004,6 @@ export const initialData = {
       "gas": 0,
       "notes": ""
     }
-  ]
+  ],
+  "monthlyRentSettlements": {}
 };
