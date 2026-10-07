@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Coins, CheckCircle2, AlertCircle, CloudCheck } from 'lucide-react';
+import { Coins, CheckCircle2, AlertCircle, CloudCheck, Lock } from 'lucide-react';
 
 export const RentDistributionSection = () => {
   const { 
@@ -108,34 +108,53 @@ export const RentDistributionSection = () => {
             <div className="flex items-center justify-between mb-1">
               <label className="text-[10px] text-slate-400 font-medium">إيجار المالك (خصم)</label>
               {isOwnerRentPaid && (
-                <span className="text-[9px] bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded font-bold">مسدد ✓</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded font-bold flex items-center gap-1 border border-emerald-500/20">
+                    <Lock className="w-2.5 h-2.5" />
+                    مسدد ✓
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => toggleOwnerRentPaid(selectedMonth, false, ownerRentNum)}
+                    className="text-[9px] text-slate-500 hover:text-rose-400 hover:underline px-1"
+                    title="إلغاء السداد للتعديل"
+                  >
+                    تعديل
+                  </button>
+                </div>
               )}
             </div>
             <div className="flex items-center gap-1">
               <input 
                 type="number"
                 value={ownerRentInput}
+                disabled={isOwnerRentPaid}
                 onChange={(e) => handleOwnerRentChange(e.target.value)}
                 placeholder="7000"
-                className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-2 py-1 text-white text-xs font-bold font-mono focus:outline-none focus:border-indigo-500"
+                className={`w-full border rounded-lg px-2 py-1 text-xs font-bold font-mono focus:outline-none transition-colors ${
+                  isOwnerRentPaid 
+                    ? 'bg-slate-900/40 border-slate-800 text-slate-400 cursor-not-allowed opacity-80' 
+                    : 'bg-slate-900/90 border-slate-700 text-white focus:border-indigo-500'
+                }`}
               />
               <span className="text-[10px] text-slate-500 shrink-0">ج.م</span>
             </div>
           </div>
           <button
             type="button"
-            onClick={() => toggleOwnerRentPaid(selectedMonth, !isOwnerRentPaid, ownerRentNum)}
-            className={`w-full py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1 truncate ${
+            disabled={isOwnerRentPaid}
+            onClick={() => toggleOwnerRentPaid(selectedMonth, true, ownerRentNum)}
+            className={`w-full py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 truncate ${
               isOwnerRentPaid
-                ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 shadow-sm'
+                ? 'bg-slate-800/80 text-emerald-400 border border-emerald-500/30 cursor-not-allowed opacity-90'
                 : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm active:scale-95'
             }`}
-            title={isOwnerRentPaid ? 'تم تسديد إيجار المالك (انقر للإلغاء)' : 'تسديد إيجار المالك'}
+            title={isOwnerRentPaid ? `تم سداد إيجار المالك (${ownerRentNum.toLocaleString()} ج.م) للشهر بالكامل` : 'تسديد إيجار المالك'}
           >
             {isOwnerRentPaid ? (
               <>
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                <span>تم السداد للمالك ✓</span>
+                <Lock className="w-3 h-3 shrink-0 text-emerald-400" />
+                <span>تم سداد {ownerRentNum.toLocaleString()} ج.م للمالك ✓</span>
               </>
             ) : (
               <span>تسديد إيجار المالك</span>
@@ -149,34 +168,53 @@ export const RentDistributionSection = () => {
             <div className="flex items-center justify-between mb-1">
               <label className="text-[10px] text-slate-400 font-medium">مصاريف العمارة (خصم)</label>
               {isBuildingExpPaid && (
-                <span className="text-[9px] bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded font-bold">مسدد ✓</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded font-bold flex items-center gap-1 border border-emerald-500/20">
+                    <Lock className="w-2.5 h-2.5" />
+                    مسدد ✓
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => toggleBuildingExpPaid(selectedMonth, false, buildingExpNum)}
+                    className="text-[9px] text-slate-500 hover:text-rose-400 hover:underline px-1"
+                    title="إلغاء السداد للتعديل"
+                  >
+                    تعديل
+                  </button>
+                </div>
               )}
             </div>
             <div className="flex items-center gap-1">
               <input 
                 type="number"
                 value={buildingExpInput}
+                disabled={isBuildingExpPaid}
                 onChange={(e) => handleBuildingExpChange(e.target.value)}
                 placeholder="0"
-                className="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-2 py-1 text-white text-xs font-bold font-mono focus:outline-none focus:border-indigo-500"
+                className={`w-full border rounded-lg px-2 py-1 text-xs font-bold font-mono focus:outline-none transition-colors ${
+                  isBuildingExpPaid 
+                    ? 'bg-slate-900/40 border-slate-800 text-slate-400 cursor-not-allowed opacity-80' 
+                    : 'bg-slate-900/90 border-slate-700 text-white focus:border-indigo-500'
+                }`}
               />
               <span className="text-[10px] text-slate-500 shrink-0">ج.م</span>
             </div>
           </div>
           <button
             type="button"
-            onClick={() => toggleBuildingExpPaid(selectedMonth, !isBuildingExpPaid, buildingExpNum)}
-            className={`w-full py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1 truncate ${
+            disabled={isBuildingExpPaid}
+            onClick={() => toggleBuildingExpPaid(selectedMonth, true, buildingExpNum)}
+            className={`w-full py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 truncate ${
               isBuildingExpPaid
-                ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 shadow-sm'
+                ? 'bg-slate-800/80 text-emerald-400 border border-emerald-500/30 cursor-not-allowed opacity-90'
                 : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm active:scale-95'
             }`}
-            title={isBuildingExpPaid ? 'تم تسديد مصاريف العمارة (انقر للإلغاء)' : 'تسديد مصاريف العمارة'}
+            title={isBuildingExpPaid ? `تم سداد مصاريف العمارة (${buildingExpNum.toLocaleString()} ج.م) للشهر بالكامل` : 'تسديد مصاريف العمارة'}
           >
             {isBuildingExpPaid ? (
               <>
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                <span>تم السداد للعمارة ✓</span>
+                <Lock className="w-3 h-3 shrink-0 text-emerald-400" />
+                <span>تم سداد {buildingExpNum.toLocaleString()} ج.م للعمارة ✓</span>
               </>
             ) : (
               <span>تسديد مصاريف العمارة</span>
@@ -232,35 +270,54 @@ export const RentDistributionSection = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {partnersListSafe.map((partner) => {
             const isReceived = Boolean(receivedPartners[partner]);
-            const isDisabled = netProfit <= 0;
+            const isRowDisabled = netProfit <= 0 || isReceived;
 
             return (
-              <label 
+              <div 
                 key={partner}
                 className={`flex items-center justify-between p-2.5 rounded-xl border transition-all select-none ${
-                  isDisabled
+                  netProfit <= 0
                     ? 'bg-slate-900/40 border-slate-800/60 text-slate-600 cursor-not-allowed opacity-50'
                     : isReceived 
-                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-200 cursor-pointer shadow-sm shadow-emerald-500/5' 
+                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-200 shadow-sm shadow-emerald-500/5 cursor-default' 
                     : 'bg-slate-800/50 border-slate-700/60 hover:border-slate-600 text-slate-300 cursor-pointer'
                 }`}
               >
-                <div className="flex items-center gap-2">
+                <label className={`flex items-center gap-2 flex-1 ${isRowDisabled ? 'cursor-default' : 'cursor-pointer'}`}>
                   <input 
                     type="checkbox"
                     checked={isReceived}
-                    disabled={isDisabled}
-                    onChange={(e) => togglePartnerRentReceived(selectedMonth, partner, e.target.checked, sharePerPartner)}
+                    disabled={isRowDisabled}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        togglePartnerRentReceived(selectedMonth, partner, true, sharePerPartner);
+                      }
+                    }}
                     className="w-4 h-4 rounded text-emerald-600 bg-slate-900 border-slate-700 focus:ring-emerald-500 cursor-pointer disabled:cursor-not-allowed"
                   />
-                  <span className="font-bold text-xs">{partner}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-xs">{partner}</span>
+                    {isReceived && <Lock className="w-3 h-3 text-emerald-400/70" />}
+                  </div>
+                </label>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className={`text-[11px] font-mono font-bold ${
+                    isReceived ? 'text-emerald-400' : netProfit <= 0 ? 'text-slate-600' : 'text-slate-400'
+                  }`}>
+                    {isReceived ? `تم استلام ${sharePerPartner.toLocaleString()} ج.م ✓` : `${sharePerPartner.toLocaleString()} ج.م`}
+                  </span>
+                  {isReceived && (
+                    <button
+                      type="button"
+                      onClick={() => togglePartnerRentReceived(selectedMonth, partner, false, sharePerPartner)}
+                      className="text-[9px] text-slate-500 hover:text-rose-400 hover:underline px-1 py-0.5"
+                      title="إلغاء استلام النصيب للتصحيح"
+                    >
+                      تعديل
+                    </button>
+                  )}
                 </div>
-                <span className={`text-[11px] font-mono font-bold ${
-                  isReceived ? 'text-emerald-400' : isDisabled ? 'text-slate-600' : 'text-slate-400'
-                }`}>
-                  {isReceived ? '✓ استلم نصيبه' : `${sharePerPartner.toLocaleString()} ج.م`}
-                </span>
-              </label>
+              </div>
             );
           })}
         </div>
