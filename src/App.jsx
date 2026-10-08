@@ -8,6 +8,7 @@ import { BedsManager } from './components/BedsManager';
 import { UtilityBillsManager } from './components/UtilityBillsManager';
 import { FinancePage } from './components/FinancePage';
 import { GoogleSheetsModal } from './components/GoogleSheetsModal';
+import { BedsReportModal } from './components/BedsReportModal';
 
 const MainContent = () => {
   const { activeTab } = useApp();
@@ -42,7 +43,12 @@ const MainContent = () => {
 };
 
 const AppShell = () => {
-  const { sheetsModalOpen, setSheetsModalOpen } = useApp();
+  const { 
+    sheetsModalOpen, 
+    setSheetsModalOpen,
+    bedsReportModalOpen,
+    setBedsReportModalOpen
+  } = useApp();
 
   return (
     <div
@@ -59,6 +65,10 @@ const AppShell = () => {
       <GoogleSheetsModal
         isOpen={sheetsModalOpen}
         onClose={() => setSheetsModalOpen(false)}
+      />
+      <BedsReportModal
+        isOpen={bedsReportModalOpen}
+        onClose={() => setBedsReportModalOpen(false)}
       />
     </div>
   );

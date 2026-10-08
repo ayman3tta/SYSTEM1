@@ -165,19 +165,74 @@
 }
 
 /* ====================== 
-   Print Styles
+   Print Styles (PDF Export)
    ====================== */
 @media print {
-  body {
-    background-color: #ffffff !important;
-    color: #000000 !important;
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
   }
+
+  html, body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   .no-print {
     display: none !important;
   }
+
+  header,
+  aside,
+  nav {
+    display: none !important;
+  }
+
+  /* Reset modal containers when printing */
+  .fixed.inset-0 {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .fixed.inset-0 > div {
+    max-width: 100% !important;
+    max-height: none !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  #printable-beds-report {
+    position: relative !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    display: block !important;
+  }
+
+  #printable-beds-report tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
   .print-only {
     display: block !important;
   }
+
   .glass-card {
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;

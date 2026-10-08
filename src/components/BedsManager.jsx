@@ -14,7 +14,8 @@ import {
   DollarSign, 
   CheckCircle2,
   ChevronDown,
-  ShieldCheck
+  ShieldCheck,
+  Printer
 } from 'lucide-react';
 
 export const BedsManager = () => {
@@ -30,6 +31,7 @@ export const BedsManager = () => {
     totalCollectedCurrentRent,
     totalRemainingCurrentRent,
     totalCollectedDeposit,
+    setBedsReportModalOpen,
   } = useApp();
 
   const [isBedModalOpen, setIsBedModalOpen] = useState(false);
@@ -116,8 +118,17 @@ export const BedsManager = () => {
             <p className="text-[11px] text-slate-400">{occupiedBedsCount}/{totalBedsCount} مؤجرة · {occupancyRate}% إشغال</p>
           </div>
         </div>
-        {canStartNextMonth ? (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setBedsReportModalOpen(true)}
+            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95"
+            title="معاينة وطباعة تقرير السراير والإيرادات والتأمين PDF"
+          >
+            <Printer className="w-3.5 h-3.5 text-indigo-400" />
+            <span>تقرير PDF</span>
+          </button>
+
+          {canStartNextMonth ? (
             <button
               onClick={handleStartNextMonth}
               className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-md shadow-indigo-600/20 active:scale-95"
@@ -125,22 +136,22 @@ export const BedsManager = () => {
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               بدء {nextMonthName}
             </button>
-          </div>
-        ) : showLockedNextMonth ? (
-          <div
-            className="flex items-center gap-1.5 bg-slate-800/80 text-slate-500 text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-700/50 cursor-not-allowed"
-            title={`يُفتح عند بداية ${nextMonthName}`}
-          >
-            <span>🔒</span>
-            <span>بدء {nextMonthName}</span>
-          </div>
-        ) : (
-          isPastArchivedMonth && (
-            <div className="flex items-center gap-1.5 bg-slate-800/80 text-slate-400 text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-700/50">
-              <span>شهر مؤرشف سابق</span>
+          ) : showLockedNextMonth ? (
+            <div
+              className="flex items-center gap-1.5 bg-slate-800/80 text-slate-500 text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-700/50 cursor-not-allowed"
+              title={`يُفتح عند بداية ${nextMonthName}`}
+            >
+              <span>🔒</span>
+              <span>بدء {nextMonthName}</span>
             </div>
-          )
-        )}
+          ) : (
+            isPastArchivedMonth && (
+              <div className="flex items-center gap-1.5 bg-slate-800/80 text-slate-400 text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-700/50">
+                <span>شهر مؤرشف سابق</span>
+              </div>
+            )
+          )}
+        </div>
       </div>
 
       {/* ── Read-only banner for archived months ── */}

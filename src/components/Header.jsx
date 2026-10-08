@@ -22,8 +22,18 @@ export const Header = () => {
     toast,
     syncStatus,
     isSheetsConnected,
-    setSheetsModalOpen
+    setSheetsModalOpen,
+    activeTab,
+    setBedsReportModalOpen
   } = useApp();
+
+  const handlePrint = () => {
+    if (activeTab === 'beds') {
+      setBedsReportModalOpen(true);
+    } else {
+      window.print();
+    }
+  };
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isDeficit = remainingCapitalPool < 0;
@@ -99,9 +109,9 @@ export const Header = () => {
             {/* Desktop Action Buttons */}
             <div className="hidden sm:flex items-center gap-1.5">
               <button
-                onClick={() => window.print()}
+                onClick={handlePrint}
                 className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
-                title="طباعة"
+                title={activeTab === 'beds' ? 'طباعة تقرير السراير والإيرادات والتأمين PDF' : 'طباعة'}
               >
                 <Printer className="w-4 h-4" />
               </button>
@@ -143,11 +153,11 @@ export const Header = () => {
               نسخة Excel
             </button>
             <button
-              onClick={() => { window.print(); setMobileMenuOpen(false); }}
+              onClick={() => { handlePrint(); setMobileMenuOpen(false); }}
               className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 text-[11px] font-medium active:scale-95"
             >
               <Printer className="w-4 h-4" />
-              طباعة
+              {activeTab === 'beds' ? 'تقرير السراير' : 'طباعة'}
             </button>
 
           </div>
