@@ -10,7 +10,8 @@ import {
   TrendingUp,
   TrendingDown,
   FileSpreadsheet,
-  ExternalLink
+  ExternalLink,
+  RotateCw
 } from 'lucide-react';
 
 export const Header = () => {
@@ -24,7 +25,8 @@ export const Header = () => {
     isSheetsConnected,
     setSheetsModalOpen,
     activeTab,
-    setBedsReportModalOpen
+    setBedsReportModalOpen,
+    refreshFromGoogleSheets
   } = useApp();
 
   const handlePrint = () => {
@@ -53,6 +55,20 @@ export const Header = () => {
         </div>
       )}
 
+      {/* Live Sync Status Bar */}
+      {syncStatus === 'loading' && (
+        <div className="bg-indigo-950/90 border-b border-indigo-500/30 px-3 py-1.5 flex items-center justify-center gap-2 text-xs font-semibold text-indigo-300 animate-pulse">
+          <RotateCw className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+          <span>جاري جلب وتحديث أحدث البيانات من Google Sheets...</span>
+        </div>
+      )}
+      {syncStatus === 'saving' && (
+        <div className="bg-blue-950/90 border-b border-blue-500/30 px-3 py-1.5 flex items-center justify-center gap-2 text-xs font-semibold text-blue-300 animate-pulse">
+          <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
+          <span>جاري حفظ وتثبيت التعديل في Google Sheets...</span>
+        </div>
+      )}
+
       <div className="px-3 sm:px-4 py-3">
         <div className="flex items-center justify-between gap-2 sm:gap-3">
           
@@ -66,8 +82,19 @@ export const Header = () => {
             </div>
           </div>
 
-          {/* Right Side: Google Sheets + Balance + Actions */}
+          {/* Right Side: Google Sheets + Refresh + Balance + Actions */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Quick Refresh Button */}
+            <button
+              onClick={() => refreshFromGoogleSheets(false)}
+              disabled={syncStatus === 'loading' || syncStatus === 'saving'}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all active:scale-95 disabled:opacity-50"
+              title="تحديث فوري من جوجل شيت (بدون إعادة تحميل الصفحة)"
+            >
+              <RotateCw className={`w-3.5 h-3.5 text-indigo-400 ${syncStatus === 'loading' ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">تحديث</span>
+            </button>
+
             {/* Google Sheets Connection Modal Button */}
             <button
               onClick={() => setSheetsModalOpen(true)}
@@ -138,6 +165,13 @@ export const Header = () => {
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
           <div className="sm:hidden mt-3 pt-3 border-t border-slate-800 grid grid-cols-4 gap-2 animate-slide-up">
+            <button
+              onClick={() => { refreshFromGoogleSheets(false); setMobileMenuOpen(false); }}
+              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-[11px] font-bold active:scale-95"
+            >
+              <RotateCw className="w-4 h-4 text-indigo-400" />
+              تحديث
+            </button>
             <button
               onClick={() => { setSheetsModalOpen(true); setMobileMenuOpen(false); }}
               className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[11px] font-bold active:scale-95"

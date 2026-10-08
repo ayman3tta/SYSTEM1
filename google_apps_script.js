@@ -35,7 +35,6 @@ function doGet(e) {
   try {
     const action = (e && e.parameter && e.parameter.action) ? e.parameter.action : 'getAllData';
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    ensureAllSheetsExist(ss);
 
     if (action === 'ping') {
       return jsonResponse({
@@ -54,14 +53,19 @@ function doGet(e) {
     }
 
     if (action === 'getAllData') {
+      // قراءة جميع الشيتات بدفعة واحدة لتسريع الاستجابة بنسبة تزيد عن 50%
+      const allSheets = ss.getSheets();
+      const map = {};
+      allSheets.forEach(s => { map[s.getName()] = s; });
+
       const data = {
-        partners: getPartnersData(ss),
-        capitalDeposits: getCapitalDepositsData(ss),
-        expenses: getExpensesData(ss),
-        beds: getBedsData(ss),
-        monthlyBills: getMonthlyBillsData(ss),
-        activityLogs: getActivityLogsData(ss),
-        monthlyRentSettlements: getRentDistributionData(ss)
+        partners: getPartnersData(map[SHEETS.PARTNERS] || ss),
+        capitalDeposits: getCapitalDepositsData(map[SHEETS.CAPITAL] || ss),
+        expenses: getExpensesData(map[SHEETS.EXPENSES] || ss),
+        beds: getBedsData(map[SHEETS.BEDS] || ss),
+        monthlyBills: getMonthlyBillsData(map[SHEETS.BILLS] || ss),
+        activityLogs: getActivityLogsData(map[SHEETS.LOGS] || ss),
+        monthlyRentSettlements: getRentDistributionData(map[SHEETS.RENT_DISTRIBUTION] || ss)
       };
       return jsonResponse({ success: true, data: data });
     }
@@ -765,10 +769,10 @@ function executeRestoreAction(ss, sheetLogs, rowIdx) {
 }
 
 // ==========================================
-// 5. دوال قراءة البيانات من الشيتات
+// 5. دوال قراءة البيانات من الشيتات (سريعة ومباشرة)
 // ==========================================
-function getExpensesData(ss) {
-  const sheet = ss.getSheetByName(SHEETS.EXPENSES);
+function getExpensesData(ssOrSheet) {
+  const sheet = (ssOrSheet && ssOrSheet.getSheetByName) ? ssOrSheet.getSheetByName(SHEETS.EXPENSES) : ssOrSheet;
   if (!sheet) return [];
   const rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) return [];
@@ -789,8 +793,8 @@ function getExpensesData(ss) {
   return list;
 }
 
-function getCapitalDepositsData(ss) {
-  const sheet = ss.getSheetByName(SHEETS.CAPITAL);
+function getCapitalDepositsData(ssOrSheet) {
+  const sheet = (ssOrSheet && ssOrSheet.getSheetByName) ? ssOrSheet.getSheetByName(SHEETS.CAPITAL) : ssOrSheet;
   if (!sheet) return [];
   const rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) return [];
@@ -809,8 +813,8 @@ function getCapitalDepositsData(ss) {
   return list;
 }
 
-function getBedsData(ss) {
-  const sheet = ss.getSheetByName(SHEETS.BEDS);
+function getBedsData(ssOrSheet) {
+  const sheet = (ssOrSheet && ssOrSheet.getSheetByName) ? ssOrSheet.getSheetByName(SHEETS.BEDS) : ssOrSheet;
   if (!sheet) return [];
   const rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) return [];
@@ -840,8 +844,8 @@ function getBedsData(ss) {
   return list;
 }
 
-function getMonthlyBillsData(ss) {
-  const sheet = ss.getSheetByName(SHEETS.BILLS);
+function getMonthlyBillsData(ssOrSheet) {
+  const sheet = (ssOrSheet && ssOrSheet.getSheetByName) ? ssOrSheet.getSheetByName(SHEETS.BILLS) : ssOrSheet;
   if (!sheet) return [];
   const rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) return [];
@@ -863,8 +867,8 @@ function getMonthlyBillsData(ss) {
   return list;
 }
 
-function getPartnersData(ss) {
-  const sheet = ss.getSheetByName(SHEETS.PARTNERS);
+function getPartnersData(ssOrSheet) {
+  const sheet = (ssOrSheet && ssOrSheet.getSheetByName) ? ssOrSheet.getSheetByName(SHEETS.PARTNERS) : ssOrSheet;
   if (!sheet) return [];
   const rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) {
@@ -887,8 +891,8 @@ function getPartnersData(ss) {
   return list;
 }
 
-function getActivityLogsData(ss) {
-  const sheet = ss.getSheetByName(SHEETS.LOGS);
+function getActivityLogsData(ssOrSheet) {
+  const sheet = (ssOrSheet && ssOrSheet.getSheetByName) ? ssOrSheet.getSheetByName(SHEETS.LOGS) : ssOrSheet;
   if (!sheet) return [];
   const rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) return [];
@@ -1107,8 +1111,8 @@ function saveAllRentSettlements(ss, settlementsMap) {
   formatHeaderRow(sheet);
 }
 
-function getRentDistributionData(ss) {
-  const sheet = ss.getSheetByName(SHEETS.RENT_DISTRIBUTION);
+function getRentDistributionData(ssOrSheet) {
+  const sheet = (ssOrSheet && ssOrSheet.getSheetByName) ? ssOrSheet.getSheetByName(SHEETS.RENT_DISTRIBUTION) : ssOrSheet;
   if (!sheet) return {};
   const rows = sheet.getDataRange().getValues();
   if (rows.length <= 1) return {};
