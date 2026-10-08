@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp, availableMonthsList } from '../context/AppContext';
 import { 
   Printer, 
@@ -21,6 +21,17 @@ export const BedsReportModal = ({ isOpen, onClose }) => {
   } = useApp();
 
   const [reportMonth, setReportMonth] = useState(selectedMonth || 'أكتوبر 2026');
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('beds-report-open');
+    } else {
+      document.body.classList.remove('beds-report-open');
+    }
+    return () => {
+      document.body.classList.remove('beds-report-open');
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -75,13 +86,17 @@ export const BedsReportModal = ({ isOpen, onClose }) => {
     hour12: true
   });
 
+
   const handlePrint = () => {
     window.print();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-sm animate-fade-in">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[94vh] flex flex-col overflow-hidden">
+    <div 
+      id="beds-report-modal-overlay"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-sm animate-fade-in print:static print:p-0 print:m-0 print:bg-white print:backdrop-blur-none"
+    >
+      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[94vh] flex flex-col overflow-hidden print:bg-white print:border-none print:shadow-none print:rounded-none print:max-w-none print:max-h-none print:w-full print:h-auto print:overflow-visible">
         
         {/* ── Toolbar (Hidden on Print) ── */}
         <div className="no-print p-3 sm:p-4 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between gap-3 flex-wrap">
@@ -137,12 +152,12 @@ export const BedsReportModal = ({ isOpen, onClose }) => {
         </div>
 
         {/* ── Scrollable Document Preview ── */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-950/60 flex justify-center">
+        <div className="report-scroll-container flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-950/60 flex justify-center print:p-0 print:m-0 print:bg-white print:overflow-visible print:block print:w-full">
           
           {/* ── Printable Report Sheet ── */}
           <div 
             id="printable-beds-report"
-            className="w-full max-w-4xl bg-white text-slate-900 rounded-xl p-6 sm:p-8 shadow-xl font-cairo border border-slate-200"
+            className="w-full max-w-4xl bg-white text-slate-900 rounded-xl p-6 sm:p-8 shadow-xl font-cairo border border-slate-200 print:max-w-none print:p-0 print:m-0 print:border-none print:shadow-none print:rounded-none print:w-full print:bg-white"
             dir="rtl"
           >
             
@@ -418,23 +433,7 @@ export const BedsReportModal = ({ isOpen, onClose }) => {
               </div>
             </div>
 
-            {/* 5. خانة التوقيعات والاعتماد */}
-            <div className="pt-4 border-t border-slate-300 grid grid-cols-3 gap-6 text-center text-xs mt-6 break-inside-avoid">
-              <div className="border border-slate-200 rounded-lg p-2.5 bg-slate-50">
-                <span className="text-slate-500 block mb-3 font-bold text-[11px]">توقيع الشريك (محمد)</span>
-                <div className="h-7 border-b border-dashed border-slate-400"></div>
-              </div>
-              <div className="border border-slate-200 rounded-lg p-2.5 bg-slate-50">
-                <span className="text-slate-500 block mb-3 font-bold text-[11px]">توقيع الشريك (أيمن)</span>
-                <div className="h-7 border-b border-dashed border-slate-400"></div>
-              </div>
-              <div className="border border-slate-200 rounded-lg p-2.5 bg-slate-50">
-                <span className="text-slate-500 block mb-3 font-bold text-[11px]">توقيع الشريك (أحمد)</span>
-                <div className="h-7 border-b border-dashed border-slate-400"></div>
-              </div>
-            </div>
-
-            {/* 6. Footer Note */}
+            {/* Footer Note */}
             <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500 font-medium">
               <span>تم استخراج هذا التقرير آلياً عبر سيستم متابعة شقة الكوثر</span>
               <span>صفحة 1 من 1</span>

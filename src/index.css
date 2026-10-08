@@ -173,10 +173,19 @@
     margin: 8mm 10mm;
   }
 
-  html, body {
+  html, 
+  body,
+  body.bg-slate-900,
+  #root,
+  #root > div {
     background: #ffffff !important;
     background-color: #ffffff !important;
+    background-image: none !important;
     color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    height: auto !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -185,13 +194,42 @@
     display: none !important;
   }
 
+  /* When the beds report is open, hide all other app containers in print */
+  body.beds-report-open #root > div > *:not(#beds-report-modal-overlay) {
+    display: none !important;
+  }
+
+  /* Reset all containers so there is NO dark background or margin or border */
+  body.beds-report-open #root,
+  body.beds-report-open #root > div,
+  body.beds-report-open #beds-report-modal-overlay,
+  body.beds-report-open #beds-report-modal-overlay > div,
+  body.beds-report-open .report-scroll-container {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    background-image: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+    display: block !important;
+  }
+
   header,
   aside,
   nav {
     display: none !important;
   }
 
-  /* Reset modal containers when printing */
+  /* General modal reset fallback */
   .fixed.inset-0 {
     position: static !important;
     background: transparent !important;
@@ -212,7 +250,7 @@
   }
 
   #printable-beds-report {
-    position: relative !important;
+    position: static !important;
     width: 100% !important;
     max-width: 100% !important;
     box-shadow: none !important;
@@ -221,6 +259,7 @@
     padding: 0 !important;
     margin: 0 !important;
     background: #ffffff !important;
+    background-color: #ffffff !important;
     display: block !important;
   }
 

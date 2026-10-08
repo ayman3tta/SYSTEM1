@@ -52,11 +52,11 @@ const AppShell = () => {
 
   return (
     <div
-      className="min-h-screen h-screen flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 font-cairo selection:bg-blue-600 selection:text-white relative"
+      className={`min-h-screen h-screen flex flex-col ${bedsReportModalOpen ? 'print:bg-white print:h-auto print:min-h-0' : ''} bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 font-cairo selection:bg-blue-600 selection:text-white relative`}
       dir="rtl"
     >
       <Header />
-      <div className="flex-1 flex overflow-hidden">
+      <div className={`flex-1 flex overflow-hidden ${bedsReportModalOpen ? 'print:hidden' : ''}`}>
         <Sidebar />
         <MainContent />
       </div>
